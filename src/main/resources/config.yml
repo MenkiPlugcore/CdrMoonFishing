@@ -1,0 +1,24 @@
+# CdrMoonFishing v0.1.0
+# Core tension prototype. Designed to stay server-side and Geyser-friendly.
+
+minigame:
+  tick-period: 5
+  start-tension: 50.0
+  perfect-min: 35.0
+  perfect-max: 70.0
+  danger-low: 5.0
+  danger-high: 95.0
+  danger-grace-ticks: 8
+  reel-power: 7.5
+  reel-cooldown-ms: 180
+  slack-per-tick: 2.0
+  progress-per-safe-tick: 4.0
+  progress-loss-outside: 1.5
+  timeout-seconds: 25
+
+messages:
+  bite-common: "Something is biting..."
+  bite-unusual: "Something unusual is biting..."
+  bite-legendary: "Something HUGE took the bait..."
+  encounter-start: "FISH ON! Keep tension between 35% and 70%."
+  escaped: "The fish escaped."
