@@ -23,6 +23,14 @@ commands:
     description: Open the CdrMoonFishing fish market
     usage: /fishmarket [open|price|sellhand|sellall|featured]
     aliases: [fmarket, fishshop]
+  fishtournament:
+    description: View and manage fishing tournaments
+    usage: /fishtournament [status|top|start|stop|cancel]
+    aliases: [ftourney, ftournament]
+  fishleaderboard:
+    description: View lifetime fishing leaderboards
+    usage: /fishleaderboard [catches|weight|biggest|legendary] [page]
+    aliases: [flb, fishlb]
 permissions:
   cdrmoonfishing.admin:
     description: Access to CdrMoonFishing administration commands
