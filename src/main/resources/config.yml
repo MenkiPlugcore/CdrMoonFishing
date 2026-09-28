@@ -1,4 +1,4 @@
-# CdrMoonFishing v1.0.4
+# CdrMoonFishing v1.0.5
 # Missing keys are merged automatically on startup/reload.
 config-version: 1
 
@@ -17,16 +17,20 @@ minigame:
   progress-loss-outside: 1.5
   timeout-seconds: 25
 
-# Visual encounter HUD. The bar remains fully visible while a bright marker
-# moves across danger / warning / safe zones, so players do not need to rely
-# on percentages alone. Standard Adventure Action Bar = Java + Bedrock safe.
+# Lane-style encounter HUD. This is not a loading bar: the marker moves across
+# a fixed lane while safe / warning / danger zones stay visible.
 ui:
   action-bar:
     enabled: true
-    segments: 24
-    segment: "▬"
-    marker: "◆"
-    show-tension-percent: true
+    segments: 20
+    prefix: "🎣 "
+    left-frame: "["
+    right-frame: "]"
+    safe-segment: "█"
+    warning-segment: "▒"
+    danger-segment: "░"
+    marker: "│"
+    show-tension-percent: false
     show-catch-progress: true
     show-state: false
 
