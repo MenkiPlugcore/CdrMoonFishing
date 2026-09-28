@@ -1,0 +1,21 @@
+name: CdrMoonFishing
+version: ${version}
+main: id.menki.cdrmoonfishing.CdrMoonFishing
+api-version: '1.21'
+author: Cadera
+description: Crossplay-first custom fishing gameplay for Java and Bedrock players.
+softdepend:
+  - Vault
+  - ItemsAdder
+  - MMOItems
+  - floodgate
+  - Geyser-Spigot
+commands:
+  fishing:
+    description: Main CdrMoonFishing command
+    usage: /fishing [reload|debug|status|cancel]
+    aliases: [moonfishing, cmf]
+permissions:
+  cdrmoonfishing.admin:
+    description: Access to CdrMoonFishing administration commands
+    default: op
