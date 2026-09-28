@@ -3,6 +3,7 @@ package id.menki.cdrmoonfishing;
 import id.menki.cdrmoonfishing.bait.BaitManager;
 import id.menki.cdrmoonfishing.command.FishContractsCommand;
 import id.menki.cdrmoonfishing.command.FishDexCommand;
+import id.menki.cdrmoonfishing.command.FishDoctorCommand;
 import id.menki.cdrmoonfishing.command.FishLeaderboardCommand;
 import id.menki.cdrmoonfishing.command.FishMarketCommand;
 import id.menki.cdrmoonfishing.command.FishMilestonesCommand;
@@ -156,6 +157,11 @@ public final class CdrMoonFishing extends JavaPlugin {
             fishMilestones.setExecutor(milestonesCommand);
             fishMilestones.setTabCompleter(milestonesCommand);
         } else getLogger().severe("Command 'fishmilestones' is missing from plugin.yml.");
+
+        PluginCommand fishDoctor = getCommand("fishdoctor");
+        if (fishDoctor != null) {
+            fishDoctor.setExecutor(new FishDoctorCommand(this));
+        } else getLogger().severe("Command 'fishdoctor' is missing from plugin.yml.");
 
         getLogger().info("CdrMoonFishing v" + getPluginMeta().getVersion() + " enabled.");
         getLogger().info("Production UI: FishDex + global leaderboard + tournament chest GUIs enabled.");
