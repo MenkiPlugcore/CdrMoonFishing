@@ -2,6 +2,7 @@ package id.menki.cdrmoonfishing.fishing;
 
 import id.menki.cdrmoonfishing.CdrMoonFishing;
 import id.menki.cdrmoonfishing.bait.BaitManager;
+import id.menki.cdrmoonfishing.contracts.ContractManager;
 import id.menki.cdrmoonfishing.model.BaitDefinition;
 import id.menki.cdrmoonfishing.model.EncounterPhase;
 import id.menki.cdrmoonfishing.model.FishBehavior;
@@ -42,6 +43,7 @@ public final class FishingManager {
     private final BaitManager baitManager;
     private final PlayerStatsManager statsManager;
     private final RodManager rodManager;
+    private final ContractManager contractManager;
     private final Map<UUID, PreparedEncounter> prepared = new ConcurrentHashMap<>();
     private final Map<UUID, FishingSession> sessions = new ConcurrentHashMap<>();
 
@@ -56,12 +58,14 @@ public final class FishingManager {
 
     private BukkitTask ticker;
 
-    public FishingManager(CdrMoonFishing plugin, FishRegistry registry, BaitManager baitManager, PlayerStatsManager statsManager, RodManager rodManager) {
+    public FishingManager(CdrMoonFishing plugin, FishRegistry registry, BaitManager baitManager,
+                          PlayerStatsManager statsManager, RodManager rodManager, ContractManager contractManager) {
         this.plugin = plugin;
         this.registry = registry;
         this.baitManager = baitManager;
         this.statsManager = statsManager;
         this.rodManager = rodManager;
+        this.contractManager = contractManager;
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.rarityKey = new NamespacedKey(plugin, "rarity");
         this.weightKey = new NamespacedKey(plugin, "weight_kg");
@@ -131,7 +135,8 @@ public final class FishingManager {
 
         double startTension = clamp(plugin.getConfig().getDouble("minigame.start-tension", 50.0), 0.0, 100.0);
         FishingSession session = new FishingSession(
-                player.getUniqueId(), encounter.fish(), encounter.region(), encounter.depth(), encounter.baitId(), startTension
+                player.getUniqueId(), encounter.fish(), encounter.region(), encounter.depth(),
+                encounter.weather(), encounter.time(), encounter.baitId(), startTension
         );
 
         sessions.put(player.getUniqueId(), session);
@@ -317,6 +322,7 @@ public final class FishingManager {
         leftovers.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
 
         CatchRecordResult record = statsManager.recordCatch(player, session.fish(), weight);
+        contractManager.recordCatch(player, session.fish(), weight, session);
 
         player.sendTitle("§a§lCATCH!", "§f" + session.fish().displayName() + " §7• §b" + String.format(Locale.US, "%.2f kg", weight), 5, 45, 10);
         player.sendMessage(Component.text("Caught ", NamedTextColor.GRAY)
