@@ -22,7 +22,9 @@ import id.menki.cdrmoonfishing.leaderboard.GlobalLeaderboardManager;
 import id.menki.cdrmoonfishing.listener.FishMarketListener;
 import id.menki.cdrmoonfishing.listener.FishingListener;
 import id.menki.cdrmoonfishing.listener.FishingUiListener;
+import id.menki.cdrmoonfishing.listener.MarketNpcListener;
 import id.menki.cdrmoonfishing.market.FishMarketManager;
+import id.menki.cdrmoonfishing.market.MarketAccessManager;
 import id.menki.cdrmoonfishing.milestone.FishDexMilestoneManager;
 import id.menki.cdrmoonfishing.registry.BaitRegistry;
 import id.menki.cdrmoonfishing.registry.FishRegistry;
@@ -47,6 +49,7 @@ public final class CdrMoonFishing extends JavaPlugin {
     private IntegrationManager integrationManager;
     private VaultEconomyHook economyHook;
     private FishMarketManager fishMarketManager;
+    private MarketAccessManager marketAccessManager;
     private TournamentManager tournamentManager;
     private GlobalLeaderboardManager globalLeaderboardManager;
     private FishItemProviderManager fishItemProviderManager;
@@ -98,10 +101,12 @@ public final class CdrMoonFishing extends JavaPlugin {
 
         this.fishingManager = new FishingManager(this, fishRegistry, baitManager, playerStatsManager, rodManager, contractManager);
         this.fishMarketManager = new FishMarketManager(this, fishRegistry, economyHook);
+        this.marketAccessManager = new MarketAccessManager(this, fishMarketManager);
         this.fishingUiManager = new FishingUiManager(this);
         getServer().getPluginManager().registerEvents(new FishingListener(fishingManager, baitManager), this);
         getServer().getPluginManager().registerEvents(new FishMarketListener(fishMarketManager), this);
-        getServer().getPluginManager().registerEvents(new FishingUiListener(fishingUiManager), this);
+        getServer().getPluginManager().registerEvents(new FishingUiListener(fishingUiManager, marketAccessManager), this);
+        getServer().getPluginManager().registerEvents(new MarketNpcListener(marketAccessManager), this);
 
         PluginCommand cdrFish = getCommand("cdrfish");
         if (cdrFish != null) {
@@ -122,7 +127,7 @@ public final class CdrMoonFishing extends JavaPlugin {
             fishDex.setTabCompleter(fishDexCommand);
         } else getLogger().severe("Command 'fishdex' is missing from plugin.yml.");
 
-        FishMarketCommand marketCommand = new FishMarketCommand(fishMarketManager);
+        FishMarketCommand marketCommand = new FishMarketCommand(fishMarketManager, marketAccessManager);
         PluginCommand fishMarket = getCommand("fishmarket");
         if (fishMarket != null) {
             fishMarket.setExecutor(marketCommand);
@@ -171,6 +176,9 @@ public final class CdrMoonFishing extends JavaPlugin {
 
         getLogger().info("CdrMoonFishing v" + getPluginMeta().getVersion() + " enabled.");
         getLogger().info("Production UI: Fishing Hub + FishDex + global leaderboard + tournament chest GUIs enabled.");
+        getLogger().info("Fish Market access: warp=" + (marketAccessManager.hasWarp() ? "SET" : "NOT_SET")
+                + " | Citizens=" + (marketAccessManager.citizensAvailable() ? "READY" : "OFFLINE")
+                + " | bound merchants=" + marketAccessManager.boundNpcIds().size());
         getLogger().info("Market security: unique catch identity + redemption ledger enabled.");
         getLogger().info("Fishing rod progression: " + rodRegistry.tiers().size() + " tiers loaded.");
         getLogger().info("FishDex milestones: " + milestoneManager.definitionCount() + " definitions loaded.");
@@ -199,8 +207,9 @@ public final class CdrMoonFishing extends JavaPlugin {
         if (milestoneManager != null) milestoneManager.reload();
         if (economyHook != null) economyHook.refresh();
         if (fishMarketManager != null) fishMarketManager.reloadSecurityLedger();
+        if (marketAccessManager != null) marketAccessManager.reload();
         if (fishItemProviderManager != null) fishItemProviderManager.clearWarnings();
-        getLogger().info("Configuration and registries reloaded with missing defaults migrated.");
+        getLogger().info("Configuration, registries and Fish Market access reloaded.");
     }
 
     public FishingManager getFishingManager() { return fishingManager; }
@@ -215,6 +224,7 @@ public final class CdrMoonFishing extends JavaPlugin {
     public PlayerStatsManager getPlayerStatsManager() { return playerStatsManager; }
     public VaultEconomyHook getEconomyHook() { return economyHook; }
     public FishMarketManager getFishMarketManager() { return fishMarketManager; }
+    public MarketAccessManager getMarketAccessManager() { return marketAccessManager; }
     public TournamentManager getTournamentManager() { return tournamentManager; }
     public GlobalLeaderboardManager getGlobalLeaderboardManager() { return globalLeaderboardManager; }
     public FishItemProviderManager getFishItemProviderManager() { return fishItemProviderManager; }
