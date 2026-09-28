@@ -8,6 +8,7 @@ softdepend:
   - Vault
   - ItemsAdder
   - MMOItems
+  - Citizens
   - floodgate
   - Geyser-Spigot
 commands:
@@ -24,8 +25,8 @@ commands:
     usage: /fishdex [page]
     aliases: [fdex]
   fishmarket:
-    description: Open the CdrMoonFishing fish market
-    usage: /fishmarket [open|price|sellhand|sellall|featured]
+    description: Travel to and manage the CdrMoonFishing Fish Market
+    usage: /fishmarket [warp|price|featured|setspawn|delspawn|bind|unbind|bindings|open]
     aliases: [fmarket, fishshop]
   fishtournament:
     description: Open or manage fishing tournaments
