@@ -1,10 +1,10 @@
 package id.menki.cdrmoonfishing.model;
 
 public enum FishBehavior {
-    CALM("Calm"),
-    ERRATIC("Erratic"),
-    AGGRESSIVE("Aggressive"),
-    DIVING("Diving");
+    CALM("Tenang"),
+    ERRATIC("Liar"),
+    AGGRESSIVE("Agresif"),
+    DIVING("Menyelam");
 
     private final String displayName;
 
