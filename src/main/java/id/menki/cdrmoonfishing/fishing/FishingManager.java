@@ -7,6 +7,8 @@ import id.menki.cdrmoonfishing.model.FishBehavior;
 import id.menki.cdrmoonfishing.model.FishDefinition;
 import id.menki.cdrmoonfishing.model.FishRarity;
 import id.menki.cdrmoonfishing.registry.FishRegistry;
+import id.menki.cdrmoonfishing.stats.PlayerStatsManager;
+import id.menki.cdrmoonfishing.stats.PlayerStatsManager.CatchRecordResult;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -35,6 +37,7 @@ public final class FishingManager {
     private final CdrMoonFishing plugin;
     private final FishRegistry registry;
     private final BaitManager baitManager;
+    private final PlayerStatsManager statsManager;
     private final Map<UUID, PreparedEncounter> prepared = new ConcurrentHashMap<>();
     private final Map<UUID, FishingSession> sessions = new ConcurrentHashMap<>();
 
@@ -49,10 +52,11 @@ public final class FishingManager {
 
     private BukkitTask ticker;
 
-    public FishingManager(CdrMoonFishing plugin, FishRegistry registry, BaitManager baitManager) {
+    public FishingManager(CdrMoonFishing plugin, FishRegistry registry, BaitManager baitManager, PlayerStatsManager statsManager) {
         this.plugin = plugin;
         this.registry = registry;
         this.baitManager = baitManager;
+        this.statsManager = statsManager;
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.rarityKey = new NamespacedKey(plugin, "rarity");
         this.weightKey = new NamespacedKey(plugin, "weight_kg");
@@ -272,11 +276,26 @@ public final class FishingManager {
         Map<Integer, ItemStack> leftovers = player.getInventory().addItem(reward);
         leftovers.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
 
+        CatchRecordResult record = statsManager.recordCatch(player, session.fish(), weight);
+
         player.sendTitle("§a§lCATCH!", "§f" + session.fish().displayName() + " §7• §b" + String.format(Locale.US, "%.2f kg", weight), 5, 45, 10);
         player.sendMessage(Component.text("Caught ", NamedTextColor.GRAY)
                 .append(Component.text(session.fish().displayName(), rarityColor(session.fish().rarity())))
                 .append(Component.text(" • " + String.format(Locale.US, "%.2f kg", weight) + " • depth " + session.depth(), NamedTextColor.GRAY)));
-        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.9f, 1.2f);
+
+        if (record.newDiscovery()) {
+            player.sendMessage(Component.text("✦ FISHDEX DISCOVERY! ", NamedTextColor.AQUA)
+                    .append(Component.text(session.fish().displayName(), rarityColor(session.fish().rarity())))
+                    .append(Component.text(" • " + record.discoveredSpecies() + "/" + registry.definitions().size(), NamedTextColor.GRAY)));
+        }
+        if (record.newSpeciesRecord() && !record.newDiscovery()) {
+            player.sendMessage(Component.text("★ New species record: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GREEN));
+        }
+        if (record.newOverallRecord()) {
+            player.sendMessage(Component.text("★ NEW PERSONAL BIGGEST CATCH!", NamedTextColor.GOLD));
+        }
+
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.9f, record.newDiscovery() ? 1.45f : 1.2f);
     }
 
     private ItemStack createFishItem(Player player, FishingSession session, double weight) {

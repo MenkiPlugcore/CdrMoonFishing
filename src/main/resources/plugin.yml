@@ -13,8 +13,12 @@ softdepend:
 commands:
   fishing:
     description: Main CdrMoonFishing command
-    usage: /fishing [bait|givebait|reload|debug|status|cancel]
+    usage: /fishing [bait|stats|givebait|reload|debug|status|cancel]
     aliases: [moonfishing, cmf]
+  fishdex:
+    description: Open your CdrMoonFishing FishDex
+    usage: /fishdex [page]
+    aliases: [fdex]
 permissions:
   cdrmoonfishing.admin:
     description: Access to CdrMoonFishing administration commands

@@ -3,6 +3,8 @@ package id.menki.cdrmoonfishing.command;
 import id.menki.cdrmoonfishing.CdrMoonFishing;
 import id.menki.cdrmoonfishing.fishing.FishingSession;
 import id.menki.cdrmoonfishing.model.BaitDefinition;
+import id.menki.cdrmoonfishing.model.FishRarity;
+import id.menki.cdrmoonfishing.stats.PlayerStatsManager.StatsSnapshot;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
@@ -28,6 +30,8 @@ public final class FishingCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             sender.sendMessage(Component.text("CdrMoonFishing v" + plugin.getPluginMeta().getVersion(), NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("/fishdex [page]", NamedTextColor.GRAY));
+            sender.sendMessage(Component.text("/" + label + " stats [player]", NamedTextColor.GRAY));
             sender.sendMessage(Component.text("/" + label + " bait [id|none]", NamedTextColor.GRAY));
             sender.sendMessage(Component.text("/" + label + " debug", NamedTextColor.GRAY));
             sender.sendMessage(Component.text("/" + label + " cancel", NamedTextColor.GRAY));
@@ -41,6 +45,27 @@ public final class FishingCommand implements CommandExecutor, TabCompleter {
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
+            case "stats" -> {
+                Player target;
+                if (args.length >= 2) {
+                    if (!sender.hasPermission("cdrmoonfishing.admin")) {
+                        sender.sendMessage(Component.text("No permission to inspect another player's fishing stats.", NamedTextColor.RED));
+                        return true;
+                    }
+                    target = plugin.getServer().getPlayerExact(args[1]);
+                    if (target == null) {
+                        sender.sendMessage(Component.text("Player is not online.", NamedTextColor.RED));
+                        return true;
+                    }
+                } else if (sender instanceof Player player) {
+                    target = player;
+                } else {
+                    sender.sendMessage(Component.text("Usage: /" + label + " stats <player>", NamedTextColor.RED));
+                    return true;
+                }
+                sendStats(sender, target);
+                return true;
+            }
             case "bait" -> {
                 if (!(sender instanceof Player player)) {
                     sender.sendMessage(Component.text("This command is player-only.", NamedTextColor.RED));
@@ -126,7 +151,9 @@ public final class FishingCommand implements CommandExecutor, TabCompleter {
                 }
                 sender.sendMessage(Component.text("Active sessions: " + plugin.getFishingManager().activeCount()
                         + " | Prepared: " + plugin.getFishingManager().preparedCount()
-                        + " | Baits: " + plugin.getBaitRegistry().definitions().size(), NamedTextColor.GRAY));
+                        + " | Baits: " + plugin.getBaitRegistry().definitions().size()
+                        + " | Fish: " + plugin.getFishRegistry().definitions().size()
+                        + " | Cached profiles: " + plugin.getPlayerStatsManager().cachedProfiles(), NamedTextColor.GRAY));
                 return true;
             }
             case "debug" -> {
@@ -165,10 +192,48 @@ public final class FishingCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void sendStats(CommandSender sender, Player target) {
+        StatsSnapshot stats = plugin.getPlayerStatsManager().snapshot(target);
+        int totalSpecies = plugin.getFishRegistry().definitions().size();
+        double completion = totalSpecies == 0 ? 0.0 : stats.discoveredSpecies() * 100.0 / totalSpecies;
+
+        sender.sendMessage(Component.text("━━━━━━━━ FISHING STATS: " + target.getName() + " ━━━━━━━━", NamedTextColor.AQUA));
+        sender.sendMessage(Component.text("Total catches: " + stats.totalCatches(), NamedTextColor.GRAY));
+        sender.sendMessage(Component.text(String.format(Locale.US, "Total weight: %.2f kg", stats.totalWeight()), NamedTextColor.GRAY));
+        sender.sendMessage(Component.text(String.format(Locale.US,
+                "FishDex: %d/%d discovered (%.1f%%)", stats.discoveredSpecies(), totalSpecies, completion), NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("Legendary catches: " + stats.legendaryCatches(), NamedTextColor.GOLD));
+
+        if (stats.biggestWeight() > 0.0) {
+            String name = stats.biggestFishName() == null ? stats.biggestFishId() : stats.biggestFishName();
+            sender.sendMessage(Component.text(String.format(Locale.US,
+                    "Biggest catch: %s • %.2f kg", name, stats.biggestWeight()), NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("Biggest catch: none yet", NamedTextColor.DARK_GRAY));
+        }
+
+        Component rarityLine = Component.text("Rarity: ", NamedTextColor.GRAY);
+        for (FishRarity rarity : FishRarity.values()) {
+            int count = stats.rarityCounts().getOrDefault(rarity, 0);
+            rarityLine = rarityLine.append(Component.text(rarity.name() + " " + count + "  ", rarityColor(rarity)));
+        }
+        sender.sendMessage(rarityLine);
+    }
+
+    private NamedTextColor rarityColor(FishRarity rarity) {
+        return switch (rarity) {
+            case COMMON -> NamedTextColor.WHITE;
+            case UNCOMMON -> NamedTextColor.GREEN;
+            case RARE -> NamedTextColor.AQUA;
+            case EPIC -> NamedTextColor.LIGHT_PURPLE;
+            case LEGENDARY -> NamedTextColor.GOLD;
+        };
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            List<String> options = new ArrayList<>(List.of("bait", "debug", "cancel"));
+            List<String> options = new ArrayList<>(List.of("bait", "stats", "debug", "cancel"));
             if (sender.hasPermission("cdrmoonfishing.admin")) {
                 options.add("givebait");
                 options.add("status");
@@ -183,6 +248,14 @@ public final class FishingCommand implements CommandExecutor, TabCompleter {
             options.add("none");
             String prefix = args[1].toLowerCase(Locale.ROOT);
             return options.stream().filter(option -> option.startsWith(prefix)).toList();
+        }
+
+        if (sender.hasPermission("cdrmoonfishing.admin") && args[0].equalsIgnoreCase("stats") && args.length == 2) {
+            String prefix = args[1].toLowerCase(Locale.ROOT);
+            return plugin.getServer().getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
+                    .toList();
         }
 
         if (sender.hasPermission("cdrmoonfishing.admin") && args[0].equalsIgnoreCase("givebait")) {
