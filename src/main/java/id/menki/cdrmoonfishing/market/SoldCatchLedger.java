@@ -31,22 +31,25 @@ public final class SoldCatchLedger {
     }
 
     public boolean markSold(String catchUid) {
-        if (catchUid == null || catchUid.isBlank()) return false;
-        if (!sold.add(catchUid)) return false;
+        if (catchUid == null || catchUid.isBlank() || !sold.add(catchUid)) return false;
         yaml.set("sold", sold.stream().sorted().toList());
-        save();
-        return true;
+        if (save()) return true;
+        sold.remove(catchUid);
+        yaml.set("sold", sold.stream().sorted().toList());
+        return false;
     }
 
     public int size() {
         return sold.size();
     }
 
-    private void save() {
+    private boolean save() {
         try {
             yaml.save(file);
+            return true;
         } catch (IOException ex) {
             plugin.getLogger().severe("Could not save sold catch ledger: " + ex.getMessage());
+            return false;
         }
     }
 }
