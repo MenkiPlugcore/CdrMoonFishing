@@ -1,11 +1,11 @@
 package id.menki.cdrmoonfishing.model;
 
 public enum FishRarity {
-    COMMON("Common", 1.0),
-    UNCOMMON("Uncommon", 1.15),
-    RARE("Rare", 1.5),
-    EPIC("Epic", 2.25),
-    LEGENDARY("Legendary", 4.0);
+    COMMON("Umum", 1.0),
+    UNCOMMON("Tidak Umum", 1.15),
+    RARE("Langka", 1.5),
+    EPIC("Epik", 2.25),
+    LEGENDARY("Legendaris", 4.0);
 
     private final String displayName;
     private final double valueMultiplier;
