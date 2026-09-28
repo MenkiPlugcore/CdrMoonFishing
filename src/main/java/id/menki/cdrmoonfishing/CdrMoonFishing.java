@@ -11,6 +11,7 @@ import id.menki.cdrmoonfishing.command.FishRodCommand;
 import id.menki.cdrmoonfishing.command.FishTournamentCommand;
 import id.menki.cdrmoonfishing.command.FishingCommand;
 import id.menki.cdrmoonfishing.command.FishingHubCommand;
+import id.menki.cdrmoonfishing.config.IndonesianLocalizationMigration;
 import id.menki.cdrmoonfishing.contracts.ContractManager;
 import id.menki.cdrmoonfishing.economy.VaultEconomyHook;
 import id.menki.cdrmoonfishing.fishing.FishingManager;
@@ -32,6 +33,7 @@ import id.menki.cdrmoonfishing.registry.RodRegistry;
 import id.menki.cdrmoonfishing.rod.RodManager;
 import id.menki.cdrmoonfishing.stats.PlayerStatsManager;
 import id.menki.cdrmoonfishing.tournament.TournamentManager;
+import id.menki.cdrmoonfishing.ui.FishingActionBarRenderer;
 import id.menki.cdrmoonfishing.ui.FishingUiManager;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -56,6 +58,7 @@ public final class CdrMoonFishing extends JavaPlugin {
     private CatchIdentityManager catchIdentityManager;
     private CatchItemUpgradeManager catchItemUpgradeManager;
     private FishingUiManager fishingUiManager;
+    private FishingActionBarRenderer actionBarRenderer;
 
     @Override
     public void onEnable() {
@@ -67,6 +70,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         saveResource("rod.yml", false);
         saveResource("contracts.yml", false);
         saveResource("milestones.yml", false);
+        IndonesianLocalizationMigration.apply(this);
 
         this.fishRegistry = new FishRegistry(this);
         this.fishRegistry.reload();
@@ -103,15 +107,16 @@ public final class CdrMoonFishing extends JavaPlugin {
         this.fishMarketManager = new FishMarketManager(this, fishRegistry, economyHook);
         this.marketAccessManager = new MarketAccessManager(this, fishMarketManager);
         this.fishingUiManager = new FishingUiManager(this);
+        this.actionBarRenderer = new FishingActionBarRenderer(this);
+        this.actionBarRenderer.start();
         getServer().getPluginManager().registerEvents(new FishingListener(fishingManager, baitManager), this);
         getServer().getPluginManager().registerEvents(new FishMarketListener(fishMarketManager), this);
         getServer().getPluginManager().registerEvents(new FishingUiListener(fishingUiManager, marketAccessManager), this);
         getServer().getPluginManager().registerEvents(new MarketNpcListener(marketAccessManager), this);
 
         PluginCommand cdrFish = getCommand("cdrfish");
-        if (cdrFish != null) {
-            cdrFish.setExecutor(new FishingHubCommand(fishingUiManager));
-        } else getLogger().severe("Command 'cdrfish' is missing from plugin.yml.");
+        if (cdrFish != null) cdrFish.setExecutor(new FishingHubCommand(fishingUiManager));
+        else getLogger().severe("Command 'cdrfish' is missing from plugin.yml.");
 
         FishingCommand fishingCommand = new FishingCommand(this);
         PluginCommand command = getCommand("fishing");
@@ -170,26 +175,20 @@ public final class CdrMoonFishing extends JavaPlugin {
         } else getLogger().severe("Command 'fishmilestones' is missing from plugin.yml.");
 
         PluginCommand fishDoctor = getCommand("fishdoctor");
-        if (fishDoctor != null) {
-            fishDoctor.setExecutor(new FishDoctorCommand(this));
-        } else getLogger().severe("Command 'fishdoctor' is missing from plugin.yml.");
+        if (fishDoctor != null) fishDoctor.setExecutor(new FishDoctorCommand(this));
+        else getLogger().severe("Command 'fishdoctor' is missing from plugin.yml.");
 
         getLogger().info("CdrMoonFishing v" + getPluginMeta().getVersion() + " enabled.");
-        getLogger().info("Production UI: Fishing Hub + FishDex + global leaderboard + tournament chest GUIs enabled.");
+        getLogger().info("Player language: Bahasa Indonesia.");
+        getLogger().info("Lane-style fishing HUD: enabled.");
         getLogger().info("Fish Market access: warp=" + (marketAccessManager.hasWarp() ? "SET" : "NOT_SET")
                 + " | Citizens=" + (marketAccessManager.citizensAvailable() ? "READY" : "OFFLINE")
                 + " | bound merchants=" + marketAccessManager.boundNpcIds().size());
-        getLogger().info("Market security: unique catch identity + redemption ledger enabled.");
-        getLogger().info("Fishing rod progression: " + rodRegistry.tiers().size() + " tiers loaded.");
-        getLogger().info("FishDex milestones: " + milestoneManager.definitionCount() + " definitions loaded.");
-        getLogger().info("Daily fishing contracts: " + contractManager.definitionCount() + " definitions loaded for "
-                + contractManager.currentDate() + ".");
-        getLogger().info("Tournament state: " + (tournamentManager.isActive() ? "ACTIVE" : "INACTIVE")
-                + " | pending payouts: " + tournamentManager.pendingRewardCount());
     }
 
     @Override
     public void onDisable() {
+        if (actionBarRenderer != null) actionBarRenderer.stop();
         if (fishingManager != null) fishingManager.shutdown();
         if (tournamentManager != null) tournamentManager.shutdown();
         if (milestoneManager != null) milestoneManager.shutdown();
@@ -200,6 +199,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         reloadConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        IndonesianLocalizationMigration.apply(this);
         fishRegistry.reload();
         baitRegistry.reload();
         rodRegistry.reload();
@@ -209,7 +209,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         if (fishMarketManager != null) fishMarketManager.reloadSecurityLedger();
         if (marketAccessManager != null) marketAccessManager.reload();
         if (fishItemProviderManager != null) fishItemProviderManager.clearWarnings();
-        getLogger().info("Configuration, registries and Fish Market access reloaded.");
+        getLogger().info("Configuration, localization, registries and Fish Market access reloaded.");
     }
 
     public FishingManager getFishingManager() { return fishingManager; }
