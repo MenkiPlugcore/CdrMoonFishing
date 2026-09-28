@@ -1,4 +1,4 @@
-# CdrMoonFishing v1.0.0
+# CdrMoonFishing v1.0.4
 # Missing keys are merged automatically on startup/reload.
 config-version: 1
 
@@ -16,6 +16,19 @@ minigame:
   progress-per-safe-tick: 4.0
   progress-loss-outside: 1.5
   timeout-seconds: 25
+
+# Visual encounter HUD. The bar remains fully visible while a bright marker
+# moves across danger / warning / safe zones, so players do not need to rely
+# on percentages alone. Standard Adventure Action Bar = Java + Bedrock safe.
+ui:
+  action-bar:
+    enabled: true
+    segments: 24
+    segment: "▬"
+    marker: "◆"
+    show-tension-percent: true
+    show-catch-progress: true
+    show-state: false
 
 behavior:
   erratic-surge-chance: 0.18
