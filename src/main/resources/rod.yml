@@ -1,4 +1,4 @@
-# CdrMoonFishing v0.8.0 — Fishing Rod Progression
+# CdrMoonFishing v1.0.6 — Progres Joran Pancing
 
 progression:
   weight-xp-multiplier: 0.5
@@ -11,35 +11,35 @@ progression:
 
 tiers:
   driftwood:
-    display-name: "Driftwood Rod"
+    display-name: "Joran Kayu Apung"
     min-xp: 0
     reel-multiplier: 1.00
     rarity-luck: 0.00
     xp-multiplier: 1.00
 
   reinforced:
-    display-name: "Reinforced Rod"
+    display-name: "Joran Diperkuat"
     min-xp: 250
     reel-multiplier: 1.06
     rarity-luck: 0.05
     xp-multiplier: 1.05
 
   oceanic:
-    display-name: "Oceanic Rod"
+    display-name: "Joran Samudra"
     min-xp: 750
     reel-multiplier: 1.12
     rarity-luck: 0.12
     xp-multiplier: 1.10
 
   abyssal:
-    display-name: "Abyssal Rod"
+    display-name: "Joran Abyssal"
     min-xp: 1750
     reel-multiplier: 1.20
     rarity-luck: 0.22
     xp-multiplier: 1.18
 
   lunar:
-    display-name: "Lunar Rod"
+    display-name: "Joran Lunar"
     min-xp: 4000
     reel-multiplier: 1.30
     rarity-luck: 0.35
