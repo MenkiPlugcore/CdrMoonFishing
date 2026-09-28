@@ -19,6 +19,10 @@ commands:
     description: Open your CdrMoonFishing FishDex
     usage: /fishdex [page]
     aliases: [fdex]
+  fishmarket:
+    description: Open the CdrMoonFishing fish market
+    usage: /fishmarket [open|price|sellhand|sellall|featured]
+    aliases: [fmarket, fishshop]
 permissions:
   cdrmoonfishing.admin:
     description: Access to CdrMoonFishing administration commands

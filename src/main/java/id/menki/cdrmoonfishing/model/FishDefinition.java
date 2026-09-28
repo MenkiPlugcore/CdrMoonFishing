@@ -17,6 +17,7 @@ public record FishDefinition(
         int maxDepth,
         double pullMin,
         double pullMax,
+        double basePricePerKg,
         List<String> biomes,
         List<String> weather,
         List<String> time,

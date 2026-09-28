@@ -11,6 +11,7 @@ fish:
     max-depth: 64
     pull-min: 0.4
     pull-max: 1.2
+    base-price-per-kg: 12.0
     biomes: ["*"]
     weather: ["ANY"]
     time: ["ANY"]
@@ -28,6 +29,7 @@ fish:
     max-depth: 64
     pull-min: 0.8
     pull-max: 1.8
+    base-price-per-kg: 18.0
     biomes: ["*"]
     weather: ["ANY"]
     time: ["ANY"]
@@ -45,6 +47,7 @@ fish:
     max-depth: 30
     pull-min: 1.0
     pull-max: 2.6
+    base-price-per-kg: 55.0
     biomes: ["*"]
     weather: ["CLEAR", "RAIN"]
     time: ["NIGHT"]
@@ -87,6 +90,7 @@ fish:
     max-depth: 64
     pull-min: 1.4
     pull-max: 3.2
+    base-price-per-kg: 90.0
     biomes: ["*"]
     weather: ["ANY"]
     time: ["NIGHT"]
@@ -141,6 +145,7 @@ fish:
     max-depth: 64
     pull-min: 1.8
     pull-max: 4.2
+    base-price-per-kg: 300.0
     biomes: ["*"]
     weather: ["THUNDER"]
     time: ["NIGHT"]

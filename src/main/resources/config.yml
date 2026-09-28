@@ -1,5 +1,5 @@
-# CdrMoonFishing v0.2.0
-# Crossplay-first: all gameplay input stays on normal interact/fishing events.
+# CdrMoonFishing v0.5.0
+# Crossplay-first: gameplay and market UI use normal server-side interactions.
 
 minigame:
   tick-period: 5
@@ -26,6 +26,21 @@ behavior:
   diving-surge-every-ticks: 8
   diving-surge-min: 5.0
   diving-surge-max: 8.0
+
+economy:
+  enabled: true
+  global-multiplier: 1.0
+  minimum-price: 1.0
+  rarity-multipliers:
+    COMMON: 1.0
+    UNCOMMON: 1.10
+    RARE: 1.30
+    EPIC: 1.65
+    LEGENDARY: 2.25
+  market:
+    featured-enabled: true
+    featured-multiplier: 1.35
+    timezone: "Asia/Jakarta"
 
 messages:
   bite-common: "Something is biting..."

@@ -73,6 +73,7 @@ public final class FishRegistry {
                     Math.max(0, section.getInt("max-depth", 64)),
                     Math.max(0.0, section.getDouble("pull-min", 0.5)),
                     Math.max(0.0, section.getDouble("pull-max", 1.5)),
+                    Math.max(0.0, section.getDouble("base-price-per-kg", defaultBasePrice(rarity))),
                     normalize(section.getStringList("biomes"), false),
                     normalize(section.getStringList("weather"), true),
                     normalize(section.getStringList("time"), true),
@@ -146,7 +147,8 @@ public final class FishRegistry {
         return new FishDefinition(
                 definition.id(), definition.displayName(), definition.material(), definition.rarity(), definition.behavior(),
                 definition.chance(), minWeight, maxWeight, minDepth, maxDepth, pullMin, pullMax,
-                definition.biomes(), definition.weather(), definition.time(), definition.requiredBaits(), definition.phases()
+                definition.basePricePerKg(), definition.biomes(), definition.weather(), definition.time(),
+                definition.requiredBaits(), definition.phases()
         );
     }
 
@@ -189,8 +191,23 @@ public final class FishRegistry {
         return Math.max(0.0, definition.chance() * multiplier);
     }
 
+    public FishDefinition get(String id) {
+        if (id == null) return null;
+        return definitions.get(id.toLowerCase(Locale.ROOT));
+    }
+
     public Map<String, FishDefinition> definitions() {
         return Collections.unmodifiableMap(definitions);
+    }
+
+    private double defaultBasePrice(FishRarity rarity) {
+        return switch (rarity) {
+            case COMMON -> 10.0;
+            case UNCOMMON -> 15.0;
+            case RARE -> 30.0;
+            case EPIC -> 60.0;
+            case LEGENDARY -> 150.0;
+        };
     }
 
     private double clamp(double value, double min, double max) {
