@@ -17,6 +17,7 @@ public final class FishingSession {
     private int dangerTicks;
     private int behaviorTicks;
     private long lastPulseAt;
+    private String activePhaseId;
 
     public FishingSession(UUID playerId, FishDefinition fish, String region, int depth, String baitId, double startTension) {
         this.playerId = playerId;
@@ -44,4 +45,6 @@ public final class FishingSession {
     public void behaviorTicks(int behaviorTicks) { this.behaviorTicks = behaviorTicks; }
     public long lastPulseAt() { return lastPulseAt; }
     public void lastPulseAt(long lastPulseAt) { this.lastPulseAt = lastPulseAt; }
+    public String activePhaseId() { return activePhaseId; }
+    public void activePhaseId(String activePhaseId) { this.activePhaseId = activePhaseId; }
 }
