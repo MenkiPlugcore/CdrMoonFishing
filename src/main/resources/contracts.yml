@@ -1,0 +1,82 @@
+# CdrMoonFishing v0.9.0 Daily Fishing Contracts
+# Three contracts are selected deterministically each day.
+
+settings:
+  daily-count: 3
+  timezone: "Asia/Jakarta"
+
+contracts:
+  rare_hunter:
+    display-name: "Rare Hunter"
+    description: "Catch 5 RARE-or-better fish."
+    progress-mode: COUNT
+    target: 5
+    conditions:
+      min-rarity: RARE
+    rewards:
+      money: 750.0
+      rod-xp: 30
+
+  heavy_haul:
+    display-name: "Heavy Haul"
+    description: "Catch a total of 30 kg of fish."
+    progress-mode: WEIGHT
+    target: 30.0
+    conditions: {}
+    rewards:
+      money: 900.0
+      rod-xp: 25
+
+  moon_koi_night:
+    display-name: "Moonlit Koi"
+    description: "Catch 1 Moon Koi at night."
+    progress-mode: COUNT
+    target: 1
+    conditions:
+      fish-id: "moon_koi"
+      time: NIGHT
+    rewards:
+      money: 1200.0
+      bait:
+        id: "moon_worm"
+        amount: 2
+      rod-xp: 40
+
+  shrimp_specialist:
+    display-name: "Shrimp Specialist"
+    description: "Catch 3 fish using Shrimp bait."
+    progress-mode: COUNT
+    target: 3
+    conditions:
+      bait-id: "shrimp"
+    rewards:
+      money: 650.0
+      bait:
+        id: "glow_worm"
+        amount: 2
+      rod-xp: 20
+
+  deep_water_hunt:
+    display-name: "Deep Water Hunt"
+    description: "Catch 3 fish from depth 20 or deeper."
+    progress-mode: COUNT
+    target: 3
+    conditions:
+      min-depth: 20
+    rewards:
+      money: 850.0
+      rod-xp: 35
+
+  storm_fisher:
+    display-name: "Storm Fisher"
+    description: "Catch 2 fish during a thunderstorm."
+    progress-mode: COUNT
+    target: 2
+    conditions:
+      weather: THUNDER
+    rewards:
+      money: 1000.0
+      bait:
+        id: "ancient_bait"
+        amount: 1
+      rod-xp: 45
