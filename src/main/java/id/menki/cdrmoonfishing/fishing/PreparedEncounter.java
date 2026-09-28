@@ -7,6 +7,7 @@ public record PreparedEncounter(
         String region,
         int depth,
         String weather,
-        String time
+        String time,
+        String baitId
 ) {
 }

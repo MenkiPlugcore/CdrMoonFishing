@@ -9,6 +9,7 @@ public record FishDefinition(
         String displayName,
         Material material,
         FishRarity rarity,
+        FishBehavior behavior,
         double chance,
         double minWeight,
         double maxWeight,
@@ -18,9 +19,10 @@ public record FishDefinition(
         double pullMax,
         List<String> biomes,
         List<String> weather,
-        List<String> time
+        List<String> time,
+        List<String> requiredBaits
 ) {
-    public boolean matches(String biomeName, int depth, String weatherName, String timeName) {
+    public boolean matches(String biomeName, int depth, String weatherName, String timeName, String baitId) {
         if (depth < minDepth || depth > maxDepth) {
             return false;
         }
@@ -35,6 +37,9 @@ public record FishDefinition(
         boolean timeOk = time.isEmpty()
                 || time.stream().anyMatch(entry -> entry.equalsIgnoreCase("ANY") || entry.equalsIgnoreCase(timeName));
 
-        return biomeOk && weatherOk && timeOk;
+        boolean baitOk = requiredBaits.isEmpty()
+                || (baitId != null && requiredBaits.stream().anyMatch(entry -> entry.equalsIgnoreCase(baitId)));
+
+        return biomeOk && weatherOk && timeOk && baitOk;
     }
 }

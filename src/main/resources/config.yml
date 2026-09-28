@@ -1,5 +1,5 @@
-# CdrMoonFishing v0.1.0
-# Core tension prototype. Designed to stay server-side and Geyser-friendly.
+# CdrMoonFishing v0.2.0
+# Crossplay-first: all gameplay input stays on normal interact/fishing events.
 
 minigame:
   tick-period: 5
@@ -15,6 +15,17 @@ minigame:
   progress-per-safe-tick: 4.0
   progress-loss-outside: 1.5
   timeout-seconds: 25
+
+behavior:
+  erratic-surge-chance: 0.18
+  erratic-surge-min: 2.5
+  erratic-surge-max: 5.5
+  aggressive-surge-chance: 0.14
+  aggressive-surge-min: 3.5
+  aggressive-surge-max: 7.0
+  diving-surge-every-ticks: 8
+  diving-surge-min: 5.0
+  diving-surge-max: 8.0
 
 messages:
   bite-common: "Something is biting..."

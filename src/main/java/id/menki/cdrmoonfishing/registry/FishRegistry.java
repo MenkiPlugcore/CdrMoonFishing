@@ -1,5 +1,7 @@
 package id.menki.cdrmoonfishing.registry;
 
+import id.menki.cdrmoonfishing.model.BaitDefinition;
+import id.menki.cdrmoonfishing.model.FishBehavior;
 import id.menki.cdrmoonfishing.model.FishDefinition;
 import id.menki.cdrmoonfishing.model.FishRarity;
 import org.bukkit.Material;
@@ -55,11 +57,20 @@ public final class FishRegistry {
                 continue;
             }
 
+            FishBehavior behavior;
+            try {
+                behavior = FishBehavior.valueOf(section.getString("behavior", "CALM").toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                plugin.getLogger().warning("Fish '" + id + "' has invalid behavior; using CALM.");
+                behavior = FishBehavior.CALM;
+            }
+
             FishDefinition definition = new FishDefinition(
                     id,
                     section.getString("display-name", id),
                     material,
                     rarity,
+                    behavior,
                     Math.max(0.0, section.getDouble("chance", 1.0)),
                     Math.max(0.01, section.getDouble("min-weight", 0.5)),
                     Math.max(0.01, section.getDouble("max-weight", 3.0)),
@@ -69,7 +80,8 @@ public final class FishRegistry {
                     Math.max(0.0, section.getDouble("pull-max", 1.5)),
                     normalize(section.getStringList("biomes"), false),
                     normalize(section.getStringList("weather"), true),
-                    normalize(section.getStringList("time"), true)
+                    normalize(section.getStringList("time"), true),
+                    normalize(section.getStringList("required-baits"), false)
             );
 
             definitions.put(id.toLowerCase(Locale.ROOT), sanitize(definition));
@@ -91,6 +103,7 @@ public final class FishRegistry {
                 definition.displayName(),
                 definition.material(),
                 definition.rarity(),
+                definition.behavior(),
                 definition.chance(),
                 minWeight,
                 maxWeight,
@@ -100,7 +113,8 @@ public final class FishRegistry {
                 pullMax,
                 definition.biomes(),
                 definition.weather(),
-                definition.time()
+                definition.time(),
+                definition.requiredBaits()
         );
     }
 
@@ -120,34 +134,43 @@ public final class FishRegistry {
         return List.copyOf(result);
     }
 
-    public FishDefinition select(String biomeName, int depth, String weatherName, String timeName) {
+    public FishDefinition select(String biomeName, int depth, String weatherName, String timeName, BaitDefinition bait) {
+        String baitId = bait == null ? null : bait.id();
         List<FishDefinition> eligible = definitions.values().stream()
                 .filter(definition -> definition.matches(
                         biomeName.toLowerCase(Locale.ROOT),
                         depth,
                         weatherName.toUpperCase(Locale.ROOT),
-                        timeName.toUpperCase(Locale.ROOT)))
+                        timeName.toUpperCase(Locale.ROOT),
+                        baitId))
                 .toList();
 
         if (eligible.isEmpty()) {
             return null;
         }
 
-        double total = eligible.stream().mapToDouble(FishDefinition::chance).sum();
+        double total = eligible.stream()
+                .mapToDouble(definition -> adjustedWeight(definition, bait))
+                .sum();
         if (total <= 0.0) {
-            return eligible.get(ThreadLocalRandom.current().nextInt(eligible.size()));
+            return null;
         }
 
         double roll = ThreadLocalRandom.current().nextDouble(total);
         double cursor = 0.0;
         for (FishDefinition definition : eligible) {
-            cursor += definition.chance();
+            cursor += adjustedWeight(definition, bait);
             if (roll <= cursor) {
                 return definition;
             }
         }
 
         return eligible.get(eligible.size() - 1);
+    }
+
+    private double adjustedWeight(FishDefinition definition, BaitDefinition bait) {
+        double multiplier = bait == null ? 1.0 : bait.multiplierFor(definition);
+        return Math.max(0.0, definition.chance() * multiplier);
     }
 
     public Map<String, FishDefinition> definitions() {

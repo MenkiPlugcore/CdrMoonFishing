@@ -3,6 +3,7 @@ fish:
     display-name: "River Carp"
     material: COD
     rarity: COMMON
+    behavior: CALM
     chance: 55.0
     min-weight: 0.8
     max-weight: 4.5
@@ -13,11 +14,13 @@ fish:
     biomes: ["*"]
     weather: ["ANY"]
     time: ["ANY"]
+    required-baits: []
 
   silver_salmon:
     display-name: "Silver Salmon"
     material: SALMON
     rarity: UNCOMMON
+    behavior: ERRATIC
     chance: 28.0
     min-weight: 1.2
     max-weight: 6.8
@@ -28,11 +31,13 @@ fish:
     biomes: ["*"]
     weather: ["ANY"]
     time: ["ANY"]
+    required-baits: []
 
   moon_koi:
     display-name: "Moon Koi"
     material: TROPICAL_FISH
     rarity: RARE
+    behavior: ERRATIC
     chance: 12.0
     min-weight: 1.5
     max-weight: 8.5
@@ -43,11 +48,13 @@ fish:
     biomes: ["*"]
     weather: ["CLEAR", "RAIN"]
     time: ["NIGHT"]
+    required-baits: []
 
   abyss_eel:
     display-name: "Abyss Eel"
     material: PUFFERFISH
     rarity: EPIC
+    behavior: DIVING
     chance: 4.5
     min-weight: 4.0
     max-weight: 18.0
@@ -58,11 +65,13 @@ fish:
     biomes: ["*"]
     weather: ["ANY"]
     time: ["NIGHT"]
+    required-baits: []
 
   lunar_leviathan:
     display-name: "Lunar Leviathan"
     material: TROPICAL_FISH
     rarity: LEGENDARY
+    behavior: AGGRESSIVE
     chance: 0.5
     min-weight: 22.0
     max-weight: 90.0
@@ -73,3 +82,4 @@ fish:
     biomes: ["*"]
     weather: ["THUNDER"]
     time: ["NIGHT"]
+    required-baits: ["ancient_bait"]

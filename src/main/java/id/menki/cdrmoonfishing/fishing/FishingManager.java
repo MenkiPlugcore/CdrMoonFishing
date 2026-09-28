@@ -1,6 +1,9 @@
 package id.menki.cdrmoonfishing.fishing;
 
 import id.menki.cdrmoonfishing.CdrMoonFishing;
+import id.menki.cdrmoonfishing.bait.BaitManager;
+import id.menki.cdrmoonfishing.model.BaitDefinition;
+import id.menki.cdrmoonfishing.model.FishBehavior;
 import id.menki.cdrmoonfishing.model.FishDefinition;
 import id.menki.cdrmoonfishing.model.FishRarity;
 import id.menki.cdrmoonfishing.registry.FishRegistry;
@@ -31,6 +34,7 @@ public final class FishingManager {
 
     private final CdrMoonFishing plugin;
     private final FishRegistry registry;
+    private final BaitManager baitManager;
     private final Map<UUID, PreparedEncounter> prepared = new ConcurrentHashMap<>();
     private final Map<UUID, FishingSession> sessions = new ConcurrentHashMap<>();
 
@@ -40,18 +44,23 @@ public final class FishingManager {
     private final NamespacedKey regionKey;
     private final NamespacedKey depthKey;
     private final NamespacedKey caughtAtKey;
+    private final NamespacedKey behaviorKey;
+    private final NamespacedKey baitKey;
 
     private BukkitTask ticker;
 
-    public FishingManager(CdrMoonFishing plugin, FishRegistry registry) {
+    public FishingManager(CdrMoonFishing plugin, FishRegistry registry, BaitManager baitManager) {
         this.plugin = plugin;
         this.registry = registry;
+        this.baitManager = baitManager;
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.rarityKey = new NamespacedKey(plugin, "rarity");
         this.weightKey = new NamespacedKey(plugin, "weight_kg");
         this.regionKey = new NamespacedKey(plugin, "region");
         this.depthKey = new NamespacedKey(plugin, "depth");
         this.caughtAtKey = new NamespacedKey(plugin, "caught_at");
+        this.behaviorKey = new NamespacedKey(plugin, "behavior");
+        this.baitKey = new NamespacedKey(plugin, "bait_used");
         startTicker();
     }
 
@@ -69,16 +78,35 @@ public final class FishingManager {
         int depth = calculateDepth(hookLocation);
         String weather = weatherName(hookLocation.getWorld());
         String time = timeName(hookLocation.getWorld());
+        BaitDefinition bait = baitManager.resolveSelected(player);
 
-        FishDefinition fish = registry.select(region, depth, weather, time);
+        FishDefinition fish = registry.select(region, depth, weather, time, bait);
         if (fish == null) {
             prepared.remove(player.getUniqueId());
             player.sendActionBar(Component.text("No fish seems interested in this spot.", NamedTextColor.GRAY));
             return false;
         }
 
-        prepared.put(player.getUniqueId(), new PreparedEncounter(fish, region, depth, weather, time));
-        player.sendActionBar(Component.text(biteHint(fish.rarity()), rarityColor(fish.rarity())));
+        String baitId = null;
+        if (bait != null) {
+            if (!baitManager.consume(player, bait)) {
+                bait = null;
+                fish = registry.select(region, depth, weather, time, null);
+                if (fish == null) {
+                    prepared.remove(player.getUniqueId());
+                    return false;
+                }
+            } else {
+                baitId = bait.id();
+            }
+        }
+
+        prepared.put(player.getUniqueId(), new PreparedEncounter(fish, region, depth, weather, time, baitId));
+        Component hint = Component.text(biteHint(fish.rarity()), rarityColor(fish.rarity()));
+        if (bait != null) {
+            hint = hint.append(Component.text("  • " + bait.displayName(), NamedTextColor.GOLD));
+        }
+        player.sendActionBar(hint);
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_SPLASH, 0.8f, 1.15f);
         return true;
     }
@@ -100,15 +128,11 @@ public final class FishingManager {
 
         double startTension = clamp(plugin.getConfig().getDouble("minigame.start-tension", 50.0), 0.0, 100.0);
         FishingSession session = new FishingSession(
-                player.getUniqueId(),
-                encounter.fish(),
-                encounter.region(),
-                encounter.depth(),
-                startTension
+                player.getUniqueId(), encounter.fish(), encounter.region(), encounter.depth(), encounter.baitId(), startTension
         );
 
         sessions.put(player.getUniqueId(), session);
-        player.sendTitle("§b§lFISH ON!", "§7Keep the tension in the safe zone", 5, 30, 10);
+        player.sendTitle("§b§lFISH ON!", "§7" + encounter.fish().behavior().displayName() + " behavior", 5, 30, 10);
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_RETRIEVE, 1.0f, 0.9f);
         sendBar(player, session);
         return true;
@@ -152,9 +176,21 @@ public final class FishingManager {
             }
 
             FishDefinition fish = session.fish();
+            session.behaviorTicks(session.behaviorTicks() + 1);
             double pull = randomBetween(fish.pullMin(), fish.pullMax());
             double jitter = ThreadLocalRandom.current().nextDouble(-0.35, 0.36);
-            session.tension(clamp(session.tension() + pull - slack + jitter, 0.0, 100.0));
+            double behaviorForce = behaviorForce(player, session);
+
+            if (fish.behavior() == FishBehavior.CALM) {
+                pull *= 0.85;
+                jitter *= 0.5;
+            } else if (fish.behavior() == FishBehavior.AGGRESSIVE) {
+                pull *= 1.25;
+            } else if (fish.behavior() == FishBehavior.DIVING) {
+                pull *= 1.10;
+            }
+
+            session.tension(clamp(session.tension() + pull + behaviorForce - slack + jitter, 0.0, 100.0));
 
             boolean safe = session.tension() >= safeMin && session.tension() <= safeMax;
             if (safe) {
@@ -184,6 +220,48 @@ public final class FishingManager {
         }
     }
 
+    private double behaviorForce(Player player, FishingSession session) {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        FishBehavior behavior = session.fish().behavior();
+        double force = 0.0;
+
+        switch (behavior) {
+            case CALM -> {
+                return 0.0;
+            }
+            case ERRATIC -> {
+                double chance = clamp(plugin.getConfig().getDouble("behavior.erratic-surge-chance", 0.18), 0.0, 1.0);
+                if (random.nextDouble() < chance) {
+                    double strength = randomBetween(
+                            plugin.getConfig().getDouble("behavior.erratic-surge-min", 2.5),
+                            plugin.getConfig().getDouble("behavior.erratic-surge-max", 5.5));
+                    force = random.nextBoolean() ? strength : -strength * 0.75;
+                }
+            }
+            case AGGRESSIVE -> {
+                double chance = clamp(plugin.getConfig().getDouble("behavior.aggressive-surge-chance", 0.14), 0.0, 1.0);
+                if (random.nextDouble() < chance) {
+                    force = randomBetween(
+                            plugin.getConfig().getDouble("behavior.aggressive-surge-min", 3.5),
+                            plugin.getConfig().getDouble("behavior.aggressive-surge-max", 7.0));
+                }
+            }
+            case DIVING -> {
+                int every = Math.max(2, plugin.getConfig().getInt("behavior.diving-surge-every-ticks", 8));
+                if (session.behaviorTicks() % every == 0) {
+                    force = randomBetween(
+                            plugin.getConfig().getDouble("behavior.diving-surge-min", 5.0),
+                            plugin.getConfig().getDouble("behavior.diving-surge-max", 8.0));
+                }
+            }
+        }
+
+        if (Math.abs(force) >= 2.0) {
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.45f, force > 0 ? 0.75f : 1.35f);
+        }
+        return force;
+    }
+
     private void completeCatch(Player player, FishingSession session) {
         sessions.remove(player.getUniqueId());
 
@@ -207,13 +285,17 @@ public final class FishingManager {
         ItemMeta meta = item.getItemMeta();
 
         meta.displayName(Component.text(fish.displayName(), rarityColor(fish.rarity())).decorate(TextDecoration.BOLD));
-        List<Component> lore = List.of(
-                Component.text(fish.rarity().displayName(), rarityColor(fish.rarity())),
-                Component.text("Weight: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GRAY),
-                Component.text("Region: " + session.region(), NamedTextColor.DARK_GRAY),
-                Component.text("Depth: " + session.depth() + " blocks", NamedTextColor.DARK_GRAY),
-                Component.text("Caught by: " + player.getName(), NamedTextColor.DARK_GRAY)
-        );
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.text(fish.rarity().displayName(), rarityColor(fish.rarity())));
+        lore.add(Component.text("Behavior: " + fish.behavior().displayName(), NamedTextColor.GRAY));
+        lore.add(Component.text("Weight: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GRAY));
+        if (session.baitId() != null) {
+            BaitDefinition bait = baitManager.registry().get(session.baitId());
+            lore.add(Component.text("Bait: " + (bait == null ? session.baitId() : bait.displayName()), NamedTextColor.DARK_GRAY));
+        }
+        lore.add(Component.text("Region: " + session.region(), NamedTextColor.DARK_GRAY));
+        lore.add(Component.text("Depth: " + session.depth() + " blocks", NamedTextColor.DARK_GRAY));
+        lore.add(Component.text("Caught by: " + player.getName(), NamedTextColor.DARK_GRAY));
         meta.lore(lore);
 
         meta.getPersistentDataContainer().set(fishIdKey, PersistentDataType.STRING, fish.id());
@@ -222,6 +304,10 @@ public final class FishingManager {
         meta.getPersistentDataContainer().set(regionKey, PersistentDataType.STRING, session.region());
         meta.getPersistentDataContainer().set(depthKey, PersistentDataType.INTEGER, session.depth());
         meta.getPersistentDataContainer().set(caughtAtKey, PersistentDataType.LONG, System.currentTimeMillis());
+        meta.getPersistentDataContainer().set(behaviorKey, PersistentDataType.STRING, fish.behavior().name());
+        if (session.baitId() != null) {
+            meta.getPersistentDataContainer().set(baitKey, PersistentDataType.STRING, session.baitId());
+        }
 
         item.setItemMeta(meta);
         return item;
@@ -241,29 +327,12 @@ public final class FishingManager {
         }
     }
 
-    public void clearPrepared(Player player) {
-        prepared.remove(player.getUniqueId());
-    }
-
-    public boolean isActive(Player player) {
-        return sessions.containsKey(player.getUniqueId());
-    }
-
-    public boolean hasPrepared(Player player) {
-        return prepared.containsKey(player.getUniqueId());
-    }
-
-    public FishingSession session(Player player) {
-        return sessions.get(player.getUniqueId());
-    }
-
-    public int activeCount() {
-        return sessions.size();
-    }
-
-    public int preparedCount() {
-        return prepared.size();
-    }
+    public void clearPrepared(Player player) { prepared.remove(player.getUniqueId()); }
+    public boolean isActive(Player player) { return sessions.containsKey(player.getUniqueId()); }
+    public boolean hasPrepared(Player player) { return prepared.containsKey(player.getUniqueId()); }
+    public FishingSession session(Player player) { return sessions.get(player.getUniqueId()); }
+    public int activeCount() { return sessions.size(); }
+    public int preparedCount() { return prepared.size(); }
 
     public void shutdown() {
         if (ticker != null) {
@@ -275,42 +344,30 @@ public final class FishingManager {
 
     private int calculateDepth(Location hookLocation) {
         World world = hookLocation.getWorld();
-        if (world == null) {
-            return 0;
-        }
+        if (world == null) return 0;
 
         int depth = 0;
         int x = hookLocation.getBlockX();
         int z = hookLocation.getBlockZ();
         int y = hookLocation.getBlockY() - 1;
         int floor = Math.max(world.getMinHeight(), y - 64);
-
         while (y >= floor) {
             Material material = world.getBlockAt(x, y, z).getType();
-            if (material != Material.WATER && material != Material.BUBBLE_COLUMN) {
-                break;
-            }
+            if (material != Material.WATER && material != Material.BUBBLE_COLUMN) break;
             depth++;
             y--;
         }
-
         return depth;
     }
 
     private String weatherName(World world) {
-        if (world == null) {
-            return "CLEAR";
-        }
-        if (world.isThundering()) {
-            return "THUNDER";
-        }
+        if (world == null) return "CLEAR";
+        if (world.isThundering()) return "THUNDER";
         return world.hasStorm() ? "RAIN" : "CLEAR";
     }
 
     private String timeName(World world) {
-        if (world == null) {
-            return "DAY";
-        }
+        if (world == null) return "DAY";
         long time = world.getTime();
         return time >= 13000L && time <= 23000L ? "NIGHT" : "DAY";
     }
@@ -326,7 +383,8 @@ public final class FishingManager {
                 ? NamedTextColor.GREEN
                 : (session.tension() <= 10.0 || session.tension() >= 90.0 ? NamedTextColor.RED : NamedTextColor.YELLOW);
 
-        Component actionBar = Component.text("Tension ", NamedTextColor.AQUA)
+        Component actionBar = Component.text("[" + session.fish().behavior().name() + "] ", NamedTextColor.DARK_AQUA)
+                .append(Component.text("Tension ", NamedTextColor.AQUA))
                 .append(Component.text(bar, barColor))
                 .append(Component.text(String.format(Locale.US, " %.0f%%  Catch %.0f%%", session.tension(), session.progress()), NamedTextColor.GRAY));
         player.sendActionBar(actionBar);
@@ -351,10 +409,10 @@ public final class FishingManager {
     }
 
     private double randomBetween(double min, double max) {
-        if (max <= min) {
-            return min;
-        }
-        return ThreadLocalRandom.current().nextDouble(min, max);
+        double low = Math.min(min, max);
+        double high = Math.max(min, max);
+        if (high <= low) return low;
+        return ThreadLocalRandom.current().nextDouble(low, high);
     }
 
     private double clamp(double value, double min, double max) {

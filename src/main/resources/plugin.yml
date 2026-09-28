@@ -13,7 +13,7 @@ softdepend:
 commands:
   fishing:
     description: Main CdrMoonFishing command
-    usage: /fishing [reload|debug|status|cancel]
+    usage: /fishing [bait|givebait|reload|debug|status|cancel]
     aliases: [moonfishing, cmf]
 permissions:
   cdrmoonfishing.admin:
