@@ -10,13 +10,14 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 public final class FishTournamentCommand implements CommandExecutor, TabCompleter {
-    private static final int PAGE_SIZE = 8;
+    private static final int PAGE_SIZE = 45;
     private final CdrMoonFishing plugin;
     private final TournamentManager manager;
 
@@ -28,7 +29,8 @@ public final class FishTournamentCommand implements CommandExecutor, TabComplete
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0 || args[0].equalsIgnoreCase("status")) {
-            sendStatus(sender);
+            if (sender instanceof Player player) plugin.getFishingUiManager().openTournament(player, 1);
+            else sendStatus(sender);
             return true;
         }
 
@@ -36,7 +38,8 @@ public final class FishTournamentCommand implements CommandExecutor, TabComplete
         switch (sub) {
             case "top", "leaderboard" -> {
                 int page = parsePage(args.length >= 2 ? args[1] : "1");
-                sendTop(sender, page);
+                if (sender instanceof Player player) plugin.getFishingUiManager().openTournament(player, page);
+                else sendTop(sender, page);
                 return true;
             }
             case "start" -> {
@@ -68,9 +71,7 @@ public final class FishTournamentCommand implements CommandExecutor, TabComplete
                     sender.sendMessage(Component.text("No permission.", NamedTextColor.RED));
                     return true;
                 }
-                if (!manager.stopWithRewards()) {
-                    sender.sendMessage(Component.text("No active tournament.", NamedTextColor.RED));
-                }
+                if (!manager.stopWithRewards()) sender.sendMessage(Component.text("No active tournament.", NamedTextColor.RED));
                 return true;
             }
             case "cancel" -> {
@@ -78,9 +79,7 @@ public final class FishTournamentCommand implements CommandExecutor, TabComplete
                     sender.sendMessage(Component.text("No permission.", NamedTextColor.RED));
                     return true;
                 }
-                if (!manager.cancel()) {
-                    sender.sendMessage(Component.text("No active tournament.", NamedTextColor.RED));
-                }
+                if (!manager.cancel()) sender.sendMessage(Component.text("No active tournament.", NamedTextColor.RED));
                 return true;
             }
             default -> {
@@ -94,18 +93,13 @@ public final class FishTournamentCommand implements CommandExecutor, TabComplete
         sender.sendMessage(Component.text("━━━━━━━━ FISHING TOURNAMENT ━━━━━━━━", NamedTextColor.AQUA));
         if (!manager.isActive()) {
             sender.sendMessage(Component.text("Status: INACTIVE", NamedTextColor.GRAY));
-            sender.sendMessage(Component.text("Use /fishtournament top to view the current board when an event is active.", NamedTextColor.DARK_GRAY));
             return;
         }
-
         long seconds = manager.remainingMillis() / 1000L;
         sender.sendMessage(Component.text("Status: ACTIVE", NamedTextColor.GREEN));
         sender.sendMessage(Component.text("Mode: " + manager.mode().displayName(), NamedTextColor.GRAY));
         sender.sendMessage(Component.text("Remaining: " + formatDuration(seconds), NamedTextColor.GRAY));
         sender.sendMessage(Component.text("Participants: " + manager.participantCount(), NamedTextColor.GRAY));
-        if (manager.pendingRewardCount() > 0) {
-            sender.sendMessage(Component.text("Pending payouts: " + manager.pendingRewardCount(), NamedTextColor.GOLD));
-        }
     }
 
     private void sendTop(CommandSender sender, int requestedPage) {
@@ -113,35 +107,26 @@ public final class FishTournamentCommand implements CommandExecutor, TabComplete
             sender.sendMessage(Component.text("No active tournament.", NamedTextColor.GRAY));
             return;
         }
-
         List<RankedEntry> ranking = manager.ranking();
         if (ranking.isEmpty()) {
-            sender.sendMessage(Component.text("Tournament leaderboard is empty. Catch a fish first.", NamedTextColor.GRAY));
+            sender.sendMessage(Component.text("Tournament leaderboard is empty.", NamedTextColor.GRAY));
             return;
         }
-
         int maxPage = Math.max(1, (int) Math.ceil(ranking.size() / (double) PAGE_SIZE));
         int page = Math.max(1, Math.min(requestedPage, maxPage));
         int start = (page - 1) * PAGE_SIZE;
         int end = Math.min(ranking.size(), start + PAGE_SIZE);
-
         sender.sendMessage(Component.text("━━━━ TOURNAMENT TOP • " + manager.mode().displayName() + " ━━━━", NamedTextColor.AQUA));
         for (int i = start; i < end; i++) {
             RankedEntry entry = ranking.get(i);
-            NamedTextColor color = entry.place() == 1 ? NamedTextColor.GOLD
-                    : entry.place() <= 3 ? NamedTextColor.AQUA : NamedTextColor.GRAY;
             sender.sendMessage(Component.text("#" + entry.place() + " " + entry.name() + " • "
-                    + manager.formatScore(entry.score()) + " • " + entry.catches() + " catches", color));
+                    + manager.formatScore(entry.score()) + " • " + entry.catches() + " catches", NamedTextColor.GRAY));
         }
-        sender.sendMessage(Component.text("Page " + page + "/" + maxPage, NamedTextColor.DARK_GRAY));
     }
 
     private int parsePage(String raw) {
-        try {
-            return Math.max(1, Integer.parseInt(raw));
-        } catch (NumberFormatException ignored) {
-            return 1;
-        }
+        try { return Math.max(1, Integer.parseInt(raw)); }
+        catch (NumberFormatException ignored) { return 1; }
     }
 
     private String formatDuration(long seconds) {
@@ -154,11 +139,7 @@ public final class FishTournamentCommand implements CommandExecutor, TabComplete
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> options = new ArrayList<>(List.of("status", "top"));
-            if (sender.hasPermission("cdrmoonfishing.admin")) {
-                options.add("start");
-                options.add("stop");
-                options.add("cancel");
-            }
+            if (sender.hasPermission("cdrmoonfishing.admin")) options.addAll(List.of("start", "stop", "cancel"));
             String prefix = args[0].toLowerCase(Locale.ROOT);
             return options.stream().filter(value -> value.startsWith(prefix)).toList();
         }
