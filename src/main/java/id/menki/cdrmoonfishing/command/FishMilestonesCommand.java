@@ -18,15 +18,13 @@ import java.util.List;
 public final class FishMilestonesCommand implements CommandExecutor, TabCompleter {
     private final FishDexMilestoneManager manager;
 
-    public FishMilestonesCommand(FishDexMilestoneManager manager) {
-        this.manager = manager;
-    }
+    public FishMilestonesCommand(FishDexMilestoneManager manager) { this.manager = manager; }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (args.length == 0 || args[0].equalsIgnoreCase("status") || args[0].equalsIgnoreCase("view")) {
             if (!(sender instanceof Player player)) {
-                sender.sendMessage("This command requires a player.");
+                sender.sendMessage("Perintah ini harus digunakan oleh player.");
                 return true;
             }
             manager.sendStatus(player);
@@ -35,34 +33,34 @@ public final class FishMilestonesCommand implements CommandExecutor, TabComplete
 
         if (args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("cdrmoonfishing.admin")) {
-                sender.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Kamu tidak punya izin.", NamedTextColor.RED));
                 return true;
             }
             manager.reload();
-            sender.sendMessage(Component.text("FishDex milestones reloaded.", NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("Milestone FishDex berhasil dimuat ulang.", NamedTextColor.GREEN));
             return true;
         }
 
         if (args[0].equalsIgnoreCase("reset")) {
             if (!sender.hasPermission("cdrmoonfishing.admin")) {
-                sender.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Kamu tidak punya izin.", NamedTextColor.RED));
                 return true;
             }
             if (args.length < 2) {
-                sender.sendMessage(Component.text("Usage: /fishmilestones reset <player>", NamedTextColor.YELLOW));
+                sender.sendMessage(Component.text("Penggunaan: /fishmilestones reset <player>", NamedTextColor.YELLOW));
                 return true;
             }
             Player target = Bukkit.getPlayerExact(args[1]);
             if (target == null) {
-                sender.sendMessage(Component.text("Player must be online.", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Player harus sedang online.", NamedTextColor.RED));
                 return true;
             }
             manager.reset(target);
-            sender.sendMessage(Component.text("Reset FishDex milestone rewards for " + target.getName() + ".", NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("Hadiah milestone FishDex untuk " + target.getName() + " sudah direset.", NamedTextColor.GREEN));
             return true;
         }
 
-        sender.sendMessage(Component.text("Usage: /fishmilestones [status|reload|reset <player>]", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("Penggunaan: /fishmilestones [status|reload|reset <player>]", NamedTextColor.YELLOW));
         return true;
     }
 
