@@ -3,6 +3,7 @@ package id.menki.cdrmoonfishing.fishing;
 import id.menki.cdrmoonfishing.CdrMoonFishing;
 import id.menki.cdrmoonfishing.bait.BaitManager;
 import id.menki.cdrmoonfishing.model.BaitDefinition;
+import id.menki.cdrmoonfishing.model.EncounterPhase;
 import id.menki.cdrmoonfishing.model.FishBehavior;
 import id.menki.cdrmoonfishing.model.FishDefinition;
 import id.menki.cdrmoonfishing.model.FishRarity;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -74,9 +76,7 @@ public final class FishingManager {
     }
 
     public boolean prepareEncounter(Player player, Location hookLocation) {
-        if (sessions.containsKey(player.getUniqueId())) {
-            return false;
-        }
+        if (sessions.containsKey(player.getUniqueId())) return false;
 
         String region = hookLocation.getBlock().getBiome().toString().toLowerCase(Locale.ROOT);
         int depth = calculateDepth(hookLocation);
@@ -107,28 +107,22 @@ public final class FishingManager {
 
         prepared.put(player.getUniqueId(), new PreparedEncounter(fish, region, depth, weather, time, baitId));
         Component hint = Component.text(biteHint(fish.rarity()), rarityColor(fish.rarity()));
-        if (bait != null) {
-            hint = hint.append(Component.text("  • " + bait.displayName(), NamedTextColor.GOLD));
-        }
+        if (bait != null) hint = hint.append(Component.text("  • " + bait.displayName(), NamedTextColor.GOLD));
+        if (!fish.phases().isEmpty()) hint = hint.append(Component.text("  • Multi-Phase", NamedTextColor.LIGHT_PURPLE));
         player.sendActionBar(hint);
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_SPLASH, 0.8f, 1.15f);
         return true;
     }
 
     public boolean startPrepared(Player player, Location fallbackLocation) {
-        if (sessions.containsKey(player.getUniqueId())) {
-            return false;
-        }
+        if (sessions.containsKey(player.getUniqueId())) return false;
 
         PreparedEncounter encounter = prepared.remove(player.getUniqueId());
         if (encounter == null) {
             prepareEncounter(player, fallbackLocation);
             encounter = prepared.remove(player.getUniqueId());
         }
-
-        if (encounter == null) {
-            return false;
-        }
+        if (encounter == null) return false;
 
         double startTension = clamp(plugin.getConfig().getDouble("minigame.start-tension", 50.0), 0.0, 100.0);
         FishingSession session = new FishingSession(
@@ -136,7 +130,10 @@ public final class FishingManager {
         );
 
         sessions.put(player.getUniqueId(), session);
-        player.sendTitle("§b§lFISH ON!", "§7" + encounter.fish().behavior().displayName() + " behavior", 5, 30, 10);
+        EncounterPhase phase = syncPhase(player, session, true);
+        if (phase == null) {
+            player.sendTitle("§b§lFISH ON!", "§7" + encounter.fish().behavior().displayName() + " behavior", 5, 30, 10);
+        }
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_RETRIEVE, 1.0f, 0.9f);
         sendBar(player, session);
         return true;
@@ -144,31 +141,27 @@ public final class FishingManager {
 
     public void reelPulse(Player player) {
         FishingSession session = sessions.get(player.getUniqueId());
-        if (session == null) {
-            return;
-        }
+        if (session == null) return;
 
         long now = System.currentTimeMillis();
         long cooldown = Math.max(0L, plugin.getConfig().getLong("minigame.reel-cooldown-ms", 180L));
-        if (now - session.lastPulseAt() < cooldown) {
-            return;
-        }
+        if (now - session.lastPulseAt() < cooldown) return;
 
         session.lastPulseAt(now);
-        double power = plugin.getConfig().getDouble("minigame.reel-power", 7.5);
+        EncounterPhase phase = session.fish().phaseAt(session.progress());
+        double phaseMultiplier = phase == null ? 1.0 : phase.reelPowerMultiplier();
+        double power = plugin.getConfig().getDouble("minigame.reel-power", 7.5) * phaseMultiplier;
         session.tension(clamp(session.tension() + power, 0.0, 100.0));
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.35f, 1.55f);
         sendBar(player, session);
     }
 
     private void tick() {
-        double safeMin = plugin.getConfig().getDouble("minigame.perfect-min", 35.0);
-        double safeMax = plugin.getConfig().getDouble("minigame.perfect-max", 70.0);
         double dangerLow = plugin.getConfig().getDouble("minigame.danger-low", 5.0);
         double dangerHigh = plugin.getConfig().getDouble("minigame.danger-high", 95.0);
         int dangerGrace = Math.max(1, plugin.getConfig().getInt("minigame.danger-grace-ticks", 8));
         double slack = plugin.getConfig().getDouble("minigame.slack-per-tick", 2.0);
-        double safeProgress = plugin.getConfig().getDouble("minigame.progress-per-safe-tick", 4.0);
+        double baseSafeProgress = plugin.getConfig().getDouble("minigame.progress-per-safe-tick", 4.0);
         double progressLoss = plugin.getConfig().getDouble("minigame.progress-loss-outside", 1.5);
         long timeoutMs = Math.max(5L, plugin.getConfig().getLong("minigame.timeout-seconds", 25L)) * 1000L;
 
@@ -180,17 +173,25 @@ public final class FishingManager {
             }
 
             FishDefinition fish = session.fish();
-            session.behaviorTicks(session.behaviorTicks() + 1);
-            double pull = randomBetween(fish.pullMin(), fish.pullMax());
-            double jitter = ThreadLocalRandom.current().nextDouble(-0.35, 0.36);
-            double behaviorForce = behaviorForce(player, session);
+            EncounterPhase phase = syncPhase(player, session, false);
+            FishBehavior behavior = phase == null ? fish.behavior() : phase.behavior();
+            double pullMultiplier = phase == null ? 1.0 : phase.pullMultiplier();
+            double progressMultiplier = phase == null ? 1.0 : phase.progressMultiplier();
+            double[] safeRange = safeRange(phase);
+            double safeMin = safeRange[0];
+            double safeMax = safeRange[1];
 
-            if (fish.behavior() == FishBehavior.CALM) {
+            session.behaviorTicks(session.behaviorTicks() + 1);
+            double pull = randomBetween(fish.pullMin(), fish.pullMax()) * pullMultiplier;
+            double jitter = ThreadLocalRandom.current().nextDouble(-0.35, 0.36);
+            double behaviorForce = behaviorForce(player, session, behavior);
+
+            if (behavior == FishBehavior.CALM) {
                 pull *= 0.85;
                 jitter *= 0.5;
-            } else if (fish.behavior() == FishBehavior.AGGRESSIVE) {
+            } else if (behavior == FishBehavior.AGGRESSIVE) {
                 pull *= 1.25;
-            } else if (fish.behavior() == FishBehavior.DIVING) {
+            } else if (behavior == FishBehavior.DIVING) {
                 pull *= 1.10;
             }
 
@@ -198,7 +199,7 @@ public final class FishingManager {
 
             boolean safe = session.tension() >= safeMin && session.tension() <= safeMax;
             if (safe) {
-                session.progress(clamp(session.progress() + safeProgress, 0.0, 100.0));
+                session.progress(clamp(session.progress() + (baseSafeProgress * progressMultiplier), 0.0, 100.0));
             } else {
                 session.progress(clamp(session.progress() - progressLoss, 0.0, 100.0));
             }
@@ -206,33 +207,65 @@ public final class FishingManager {
             boolean dangerous = session.tension() <= dangerLow || session.tension() >= dangerHigh;
             session.dangerTicks(dangerous ? session.dangerTicks() + 1 : Math.max(0, session.dangerTicks() - 1));
 
+            syncPhase(player, session, false);
             sendBar(player, session);
 
             if (session.progress() >= 100.0) {
                 completeCatch(player, session);
                 continue;
             }
-
             if (session.dangerTicks() >= dangerGrace) {
                 failCatch(player, session, session.tension() >= dangerHigh ? "The line snapped!" : "The line went slack!");
                 continue;
             }
-
             if (System.currentTimeMillis() - session.startedAt() >= timeoutMs) {
                 failCatch(player, session, "The fish escaped!");
             }
         }
     }
 
-    private double behaviorForce(Player player, FishingSession session) {
+    private EncounterPhase syncPhase(Player player, FishingSession session, boolean initial) {
+        EncounterPhase phase = session.fish().phaseAt(session.progress());
+        String nextId = phase == null ? null : phase.id();
+        if (Objects.equals(session.activePhaseId(), nextId)) return phase;
+
+        session.activePhaseId(nextId);
+        session.behaviorTicks(0);
+        session.dangerTicks(0);
+
+        if (phase != null) {
+            String title = phase.title() == null || phase.title().isBlank()
+                    ? "§b§l" + phase.displayName().toUpperCase(Locale.ROOT)
+                    : phase.title();
+            String subtitle = phase.subtitle() == null || phase.subtitle().isBlank()
+                    ? "§7" + phase.behavior().displayName() + " behavior"
+                    : phase.subtitle();
+            player.sendTitle(title, subtitle, initial ? 5 : 3, initial ? 32 : 25, 8);
+            playPhaseSound(player, phase);
+            if (!initial) {
+                player.sendMessage(Component.text("⚡ Encounter phase: ", NamedTextColor.LIGHT_PURPLE)
+                        .append(Component.text(phase.displayName(), NamedTextColor.AQUA)));
+            }
+        }
+        return phase;
+    }
+
+    private void playPhaseSound(Player player, EncounterPhase phase) {
+        if (phase.sound() == null || phase.sound().isBlank()) return;
+        try {
+            Sound sound = Sound.valueOf(phase.sound().toUpperCase(Locale.ROOT));
+            player.playSound(player.getLocation(), sound, 0.9f, 0.95f);
+        } catch (IllegalArgumentException ignored) {
+            plugin.getLogger().warning("Invalid phase sound '" + phase.sound() + "' for fish phase '" + phase.id() + "'.");
+        }
+    }
+
+    private double behaviorForce(Player player, FishingSession session, FishBehavior behavior) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        FishBehavior behavior = session.fish().behavior();
         double force = 0.0;
 
         switch (behavior) {
-            case CALM -> {
-                return 0.0;
-            }
+            case CALM -> { return 0.0; }
             case ERRATIC -> {
                 double chance = clamp(plugin.getConfig().getDouble("behavior.erratic-surge-chance", 0.18), 0.0, 1.0);
                 if (random.nextDouble() < chance) {
@@ -306,7 +339,11 @@ public final class FishingManager {
         meta.displayName(Component.text(fish.displayName(), rarityColor(fish.rarity())).decorate(TextDecoration.BOLD));
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text(fish.rarity().displayName(), rarityColor(fish.rarity())));
-        lore.add(Component.text("Behavior: " + fish.behavior().displayName(), NamedTextColor.GRAY));
+        if (fish.phases().isEmpty()) {
+            lore.add(Component.text("Behavior: " + fish.behavior().displayName(), NamedTextColor.GRAY));
+        } else {
+            lore.add(Component.text("Encounter: " + fish.phases().size() + " phases", NamedTextColor.LIGHT_PURPLE));
+        }
         lore.add(Component.text("Weight: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GRAY));
         if (session.baitId() != null) {
             BaitDefinition bait = baitManager.registry().get(session.baitId());
@@ -324,9 +361,7 @@ public final class FishingManager {
         meta.getPersistentDataContainer().set(depthKey, PersistentDataType.INTEGER, session.depth());
         meta.getPersistentDataContainer().set(caughtAtKey, PersistentDataType.LONG, System.currentTimeMillis());
         meta.getPersistentDataContainer().set(behaviorKey, PersistentDataType.STRING, fish.behavior().name());
-        if (session.baitId() != null) {
-            meta.getPersistentDataContainer().set(baitKey, PersistentDataType.STRING, session.baitId());
-        }
+        if (session.baitId() != null) meta.getPersistentDataContainer().set(baitKey, PersistentDataType.STRING, session.baitId());
 
         item.setItemMeta(meta);
         return item;
@@ -341,9 +376,7 @@ public final class FishingManager {
     public void cancel(Player player, boolean notify) {
         prepared.remove(player.getUniqueId());
         FishingSession removed = sessions.remove(player.getUniqueId());
-        if (notify && removed != null) {
-            player.sendActionBar(Component.text("Fishing encounter cancelled.", NamedTextColor.GRAY));
-        }
+        if (notify && removed != null) player.sendActionBar(Component.text("Fishing encounter cancelled.", NamedTextColor.GRAY));
     }
 
     public void clearPrepared(Player player) { prepared.remove(player.getUniqueId()); }
@@ -354,9 +387,7 @@ public final class FishingManager {
     public int preparedCount() { return prepared.size(); }
 
     public void shutdown() {
-        if (ticker != null) {
-            ticker.cancel();
-        }
+        if (ticker != null) ticker.cancel();
         prepared.clear();
         sessions.clear();
     }
@@ -392,21 +423,39 @@ public final class FishingManager {
     }
 
     private void sendBar(Player player, FishingSession session) {
-        double safeMin = plugin.getConfig().getDouble("minigame.perfect-min", 35.0);
-        double safeMax = plugin.getConfig().getDouble("minigame.perfect-max", 70.0);
+        EncounterPhase phase = session.fish().phaseAt(session.progress());
+        FishBehavior behavior = phase == null ? session.fish().behavior() : phase.behavior();
+        double[] safe = safeRange(phase);
         int filled = (int) Math.round((session.tension() / 100.0) * BAR_LENGTH);
         filled = Math.max(0, Math.min(BAR_LENGTH, filled));
 
         String bar = "▰".repeat(filled) + "▱".repeat(BAR_LENGTH - filled);
-        NamedTextColor barColor = session.tension() >= safeMin && session.tension() <= safeMax
+        NamedTextColor barColor = session.tension() >= safe[0] && session.tension() <= safe[1]
                 ? NamedTextColor.GREEN
                 : (session.tension() <= 10.0 || session.tension() >= 90.0 ? NamedTextColor.RED : NamedTextColor.YELLOW);
+        String state = phase == null ? behavior.name() : phase.displayName().toUpperCase(Locale.ROOT);
 
-        Component actionBar = Component.text("[" + session.fish().behavior().name() + "] ", NamedTextColor.DARK_AQUA)
+        Component actionBar = Component.text("[" + state + "] ", phase == null ? NamedTextColor.DARK_AQUA : NamedTextColor.LIGHT_PURPLE)
                 .append(Component.text("Tension ", NamedTextColor.AQUA))
                 .append(Component.text(bar, barColor))
                 .append(Component.text(String.format(Locale.US, " %.0f%%  Catch %.0f%%", session.tension(), session.progress()), NamedTextColor.GRAY));
         player.sendActionBar(actionBar);
+    }
+
+    private double[] safeRange(EncounterPhase phase) {
+        double min = plugin.getConfig().getDouble("minigame.perfect-min", 35.0);
+        double max = plugin.getConfig().getDouble("minigame.perfect-max", 70.0);
+        if (phase != null) {
+            min += phase.safeMinOffset();
+            max += phase.safeMaxOffset();
+        }
+        min = clamp(min, 0.0, 95.0);
+        max = clamp(max, 5.0, 100.0);
+        if (max - min < 5.0) {
+            max = Math.min(100.0, min + 5.0);
+            if (max - min < 5.0) min = Math.max(0.0, max - 5.0);
+        }
+        return new double[]{min, max};
     }
 
     private String biteHint(FishRarity rarity) {
