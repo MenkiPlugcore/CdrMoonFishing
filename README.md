@@ -4,7 +4,7 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 
 ## Current version
 
-`v0.9.0` — Daily Fishing Contracts / Quest
+`v0.9.5` — FishDex Milestones + Collection Rewards
 
 ## Implemented
 
@@ -13,15 +13,75 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 - CALM, ERRATIC, AGGRESSIVE and DIVING behavior profiles
 - Rare/Epic/Legendary multi-phase encounters
 - Persistent FishDex and lifetime player statistics
+- FishDex milestone rewards with permanent Collection Luck
 - Vault-backed Fish Market with per-species price/kg
 - Daily Featured Catch market bonus
 - Live fishing tournaments + lifetime leaderboards
-- Runtime ItemsAdder/MMOItems custom fish item providers with vanilla fallback
+- Runtime ItemsAdder/MMItems custom fish item providers with vanilla fallback
 - Persistent progression fishing rods with XP, auto tier upgrades, reel bonus and rarity luck
 - Daily fishing contracts with deterministic daily rotation
-- Contract conditions for rarity, weight, species, bait, depth, time and weather
 - Contract rewards through Vault money, custom bait and Rod XP
-- Pending Vault payout retry for completed contracts
+
+## FishDex Milestones
+
+FishDex completion now provides permanent player progression rather than acting only as a checklist.
+
+```text
+/fishmilestones
+/fishmilestones status
+```
+
+Aliases: `/fmilestones`, `/fishdexrewards`, `/fdrewards`.
+
+Admin utilities:
+
+```text
+/fishmilestones reload
+/fishmilestones reset <player>
+```
+
+Default milestones:
+
+```text
+25% FishDex   FishDex Explorer
+50% FishDex   FishDex Collector
+75% FishDex   FishDex Hunter
+100% FishDex  Master of the FishDex
+First LEGENDARY catch  Legendary Discovery
+```
+
+Rewards can combine:
+
+```text
+Vault money
+CdrMoonFishing bait
+Rod XP
+Permanent Collection Luck
+```
+
+Default total Collection Luck reaches +15% after completing all default percentage milestones and the First Legendary milestone. Collection Luck stacks with progression-rod rarity luck and affects weighted fish selection, but never bypasses species requirements such as bait, depth, weather or time.
+
+Milestone player state is stored under:
+
+```text
+plugins/CdrMoonFishing/milestones/players/<uuid>.yml
+```
+
+Milestone definitions live in:
+
+```text
+plugins/CdrMoonFishing/milestones.yml
+```
+
+Supported milestone types:
+
+```text
+COLLECTION_PERCENT
+FIRST_LEGENDARY
+RARITY_COMPLETE
+```
+
+`RARITY_COMPLETE` is included for larger future fish catalogs, for example rewarding a player after discovering every RARE species.
 
 ## Daily Fishing Contracts
 
@@ -51,46 +111,11 @@ Deep Water Hunt    Catch 3 fish at depth 20+
 Storm Fisher       Catch 2 fish during thunder
 ```
 
-A deterministic subset is selected from `contracts.yml` each date. Default timezone is `Asia/Jakarta`. Progress resets automatically when the player next catches a fish or opens `/fishcontracts` after the date changes.
-
-Contracts can filter by:
-
-```text
-fish-id
-min-rarity
-bait-id
-min-depth
-max-depth
-time
-weather
-```
-
-Progress modes:
-
-```text
-COUNT   Adds 1 per matching successful catch
-WEIGHT  Adds the caught fish weight in kg
-```
-
-Rewards can combine:
-
-```text
-Vault money
-CdrMoonFishing bait
-Rod XP
-```
-
-If the Vault economy provider is unavailable when a contract completes, the cash reward is stored in the player's contract profile and retried later instead of being lost.
-
-Contract profiles are stored under:
-
-```text
-plugins/CdrMoonFishing/contracts/players/<uuid>.yml
-```
+A deterministic subset is selected from `contracts.yml` each date. Default timezone is `Asia/Jakarta`.
 
 ## Fishing Rod Progression
 
-Only CdrMoonFishing progression rods earn rod XP. Normal vanilla fishing rods still work, but use neutral `1.00x` fishing bonuses and never level up.
+Only CdrMoonFishing progression rods earn rod XP. Normal vanilla fishing rods still work and receive permanent Collection Luck, but do not receive tier-specific Rod Luck or rod XP progression.
 
 ```text
 /fishrod
@@ -191,12 +216,13 @@ gradle clean build
 Output:
 
 ```text
-build/libs/CdrMoonFishing-0.9.0.jar
+build/libs/CdrMoonFishing-0.9.5.jar
 ```
 
 ## Commands
 
 ```text
+/fishmilestones [status|reload|reset]
 /fishcontracts [reload|reset]
 /fishrod [info|tiers|give]
 /fishtournament [status|top|start|stop|cancel]
@@ -214,6 +240,5 @@ build/libs/CdrMoonFishing-0.9.0.jar
 
 ## Roadmap
 
-- v0.9.5 — FishDex milestones and collection rewards
 - v1.0.0 — production polish, GUI pass, balancing, anti-exploit and config/message cleanup
-- later — rod perks/builds and fishing streak/combo mechanics
+- later — rod perks/builds, fishing streak/combo mechanics, larger fish catalog, mutations/variants and richer collection progression
