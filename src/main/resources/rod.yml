@@ -1,0 +1,46 @@
+# CdrMoonFishing v0.8.0 — Fishing Rod Progression
+
+progression:
+  weight-xp-multiplier: 0.5
+  base-xp:
+    COMMON: 5
+    UNCOMMON: 8
+    RARE: 16
+    EPIC: 35
+    LEGENDARY: 100
+
+tiers:
+  driftwood:
+    display-name: "Driftwood Rod"
+    min-xp: 0
+    reel-multiplier: 1.00
+    rarity-luck: 0.00
+    xp-multiplier: 1.00
+
+  reinforced:
+    display-name: "Reinforced Rod"
+    min-xp: 250
+    reel-multiplier: 1.06
+    rarity-luck: 0.05
+    xp-multiplier: 1.05
+
+  oceanic:
+    display-name: "Oceanic Rod"
+    min-xp: 750
+    reel-multiplier: 1.12
+    rarity-luck: 0.12
+    xp-multiplier: 1.10
+
+  abyssal:
+    display-name: "Abyssal Rod"
+    min-xp: 1750
+    reel-multiplier: 1.20
+    rarity-luck: 0.22
+    xp-multiplier: 1.18
+
+  lunar:
+    display-name: "Lunar Rod"
+    min-xp: 4000
+    reel-multiplier: 1.30
+    rarity-luck: 0.35
+    xp-multiplier: 1.30
