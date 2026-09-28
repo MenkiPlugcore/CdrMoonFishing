@@ -22,8 +22,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public final class FishMarketManager {
     public static final int SLOT_FEATURED = 11;
@@ -37,6 +39,8 @@ public final class FishMarketManager {
     private final VaultEconomyHook economy;
     private final NamespacedKey fishIdKey;
     private final NamespacedKey weightKey;
+    private final NamespacedKey catchUidKey;
+    private final SoldCatchLedger soldLedger;
 
     public FishMarketManager(CdrMoonFishing plugin, FishRegistry registry, VaultEconomyHook economy) {
         this.plugin = plugin;
@@ -44,6 +48,8 @@ public final class FishMarketManager {
         this.economy = economy;
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.weightKey = new NamespacedKey(plugin, "weight_kg");
+        this.catchUidKey = new NamespacedKey(plugin, "catch_uid");
+        this.soldLedger = new SoldCatchLedger(plugin);
     }
 
     public void open(Player player) {
@@ -62,8 +68,11 @@ public final class FishMarketManager {
         inventory.setItem(SLOT_SELL_HELD, button(Material.EMERALD, "Sell Held Fish", NamedTextColor.GREEN,
                 List.of(Component.text("Sell the custom fish in your main hand.", NamedTextColor.GRAY))));
         inventory.setItem(SLOT_SELL_ALL, button(Material.CHEST, "Sell All Fish", NamedTextColor.GOLD,
-                List.of(Component.text("Sell all CdrMoonFishing fish in storage slots.", NamedTextColor.GRAY))));
+                List.of(Component.text("Sell all valid CdrMoonFishing fish in storage slots.", NamedTextColor.GRAY))));
         inventory.setItem(SLOT_CLOSE, button(Material.BARRIER, "Close", NamedTextColor.RED, List.of()));
+        inventory.setItem(25, button(Material.SHIELD, "Market Security", NamedTextColor.AQUA,
+                List.of(Component.text("Unique catch anti-duplicate ledger: ACTIVE", NamedTextColor.GREEN),
+                        Component.text("Redeemed catch IDs: " + soldLedger.size(), NamedTextColor.DARK_GRAY))));
 
         if (!plugin.getConfig().getBoolean("economy.enabled", true)) {
             inventory.setItem(26, button(Material.REDSTONE_BLOCK, "Market Disabled", NamedTextColor.RED,
@@ -91,9 +100,7 @@ public final class FishMarketManager {
                 refreshNextTick(player);
             }
             case SLOT_CLOSE -> player.closeInventory();
-            default -> {
-                // Display-only slot.
-            }
+            default -> { }
         }
     }
 
@@ -101,6 +108,10 @@ public final class FishMarketManager {
         FishQuote quote = quote(player.getInventory().getItemInMainHand());
         if (quote == null) {
             player.sendMessage(Component.text("Hold a valid CdrMoonFishing fish first.", NamedTextColor.RED));
+            return;
+        }
+        if (!isSellableIdentity(quote)) {
+            player.sendMessage(Component.text("This catch identity is not eligible for sale.", NamedTextColor.RED));
             return;
         }
         player.sendMessage(Component.text("Market quote: ", NamedTextColor.AQUA)
@@ -133,11 +144,19 @@ public final class FishMarketManager {
             player.sendMessage(Component.text("The item in your hand is not a sellable custom fish.", NamedTextColor.RED));
             return new SaleResult(false, 0, 0.0);
         }
+        if (!validateSaleIdentity(player, quote)) return new SaleResult(false, 0, 0.0);
+
+        String reservedUid = quote.catchUid();
+        if (reservedUid != null && !soldLedger.markSold(reservedUid)) {
+            player.sendMessage(Component.text("Sale blocked: catch identity could not be reserved or was already redeemed.", NamedTextColor.RED));
+            return new SaleResult(false, 0, 0.0);
+        }
 
         ItemStack backup = current.clone();
         player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
         DepositResult deposit = economy.deposit(player, quote.totalValue());
         if (!deposit.success()) {
+            if (reservedUid != null) soldLedger.unmarkSold(reservedUid);
             restoreItem(player, backup);
             player.sendMessage(Component.text("Sale failed: " + deposit.error(), NamedTextColor.RED));
             return new SaleResult(false, 0, 0.0);
@@ -153,28 +172,53 @@ public final class FishMarketManager {
         ItemStack[] storage = player.getInventory().getStorageContents();
         List<Integer> slots = new ArrayList<>();
         List<ItemStack> backups = new ArrayList<>();
+        List<String> identities = new ArrayList<>();
+        Set<String> seenInBatch = new HashSet<>();
         double total = 0.0;
         int count = 0;
+        int rejected = 0;
 
         for (int slot = 0; slot < storage.length; slot++) {
             ItemStack item = storage[slot];
             FishQuote quote = quote(item);
             if (quote == null) continue;
+            if (!isSellableIdentity(quote)) {
+                rejected++;
+                continue;
+            }
+            if (quote.catchUid() != null && !seenInBatch.add(quote.catchUid())) {
+                rejected++;
+                continue;
+            }
             slots.add(slot);
             backups.add(item.clone());
+            identities.add(quote.catchUid());
             total += quote.totalValue();
             count += quote.amount();
         }
 
         total = roundMoney(total);
         if (slots.isEmpty() || total <= 0.0) {
-            player.sendMessage(Component.text("No sellable custom fish found in your inventory.", NamedTextColor.RED));
+            player.sendMessage(Component.text("No eligible custom fish found in your inventory.", NamedTextColor.RED));
+            if (rejected > 0) player.sendMessage(Component.text(rejected + " fish stack(s) rejected by market security.", NamedTextColor.YELLOW));
             return new SaleResult(false, 0, 0.0);
+        }
+
+        List<String> reserved = new ArrayList<>();
+        for (String uid : identities) {
+            if (uid == null) continue;
+            if (!soldLedger.markSold(uid)) {
+                for (String rollback : reserved) soldLedger.unmarkSold(rollback);
+                player.sendMessage(Component.text("Sale blocked: one catch identity was already redeemed or ledger persistence failed.", NamedTextColor.RED));
+                return new SaleResult(false, 0, 0.0);
+            }
+            reserved.add(uid);
         }
 
         for (int slot : slots) player.getInventory().setItem(slot, null);
         DepositResult deposit = economy.deposit(player, total);
         if (!deposit.success()) {
+            for (String uid : reserved) soldLedger.unmarkSold(uid);
             for (int i = 0; i < slots.size(); i++) {
                 int slot = slots.get(i);
                 ItemStack backup = backups.get(i);
@@ -186,6 +230,9 @@ public final class FishMarketManager {
         }
 
         saleMessage(player, count, total);
+        if (rejected > 0) {
+            player.sendMessage(Component.text(rejected + " fish stack(s) were skipped by market security.", NamedTextColor.YELLOW));
+        }
         return new SaleResult(true, count, total);
     }
 
@@ -194,6 +241,7 @@ public final class FishMarketManager {
         ItemMeta meta = item.getItemMeta();
         String fishId = meta.getPersistentDataContainer().get(fishIdKey, PersistentDataType.STRING);
         Double weight = meta.getPersistentDataContainer().get(weightKey, PersistentDataType.DOUBLE);
+        String catchUid = meta.getPersistentDataContainer().get(catchUidKey, PersistentDataType.STRING);
         if (fishId == null || weight == null || weight <= 0.0) return null;
 
         FishDefinition fish = registry.get(fishId);
@@ -203,7 +251,7 @@ public final class FishMarketManager {
         boolean featured = isFeatured(fish);
         double total = price(fish, weight, amount, featured);
         if (total <= 0.0) return null;
-        return new FishQuote(fish, weight, amount, total, featured);
+        return new FishQuote(fish, weight, amount, total, featured, catchUid);
     }
 
     public FishDefinition featuredFish() {
@@ -223,6 +271,38 @@ public final class FishMarketManager {
         long epochDay = LocalDate.now(zone).toEpochDay();
         int index = Math.floorMod(epochDay, fish.size());
         return fish.get(index);
+    }
+
+    public int redeemedCatchCount() {
+        return soldLedger.size();
+    }
+
+    public void reloadSecurityLedger() {
+        soldLedger.reload();
+    }
+
+    private boolean validateSaleIdentity(Player player, FishQuote quote) {
+        if (quote.catchUid() == null) {
+            if (plugin.getConfig().getBoolean("security.market.require-catch-uid", false)) {
+                player.sendMessage(Component.text("Legacy fish without a v1.0 catch identity cannot be sold on this server.", NamedTextColor.RED));
+                return false;
+            }
+            return true;
+        }
+        if (quote.amount() != 1) {
+            player.sendMessage(Component.text("Sale blocked: identified catches cannot be stacked.", NamedTextColor.RED));
+            return false;
+        }
+        if (soldLedger.isSold(quote.catchUid())) {
+            player.sendMessage(Component.text("Sale blocked: this catch identity has already been redeemed.", NamedTextColor.RED));
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isSellableIdentity(FishQuote quote) {
+        if (quote.catchUid() == null) return !plugin.getConfig().getBoolean("security.market.require-catch-uid", false);
+        return quote.amount() == 1 && !soldLedger.isSold(quote.catchUid());
     }
 
     private double price(FishDefinition fish, double weight, int amount, boolean featured) {
@@ -297,6 +377,12 @@ public final class FishMarketManager {
         lore.add(Component.text(String.format(Locale.US, "Weight: %.2f kg", quote.weight()), NamedTextColor.GRAY));
         lore.add(Component.text("Value: " + economy.format(quote.totalValue()), NamedTextColor.GREEN));
         if (quote.featured()) lore.add(Component.text("★ Featured Catch bonus applied", NamedTextColor.GOLD));
+        if (quote.catchUid() != null) {
+            lore.add(Component.text(soldLedger.isSold(quote.catchUid()) ? "Identity: REDEEMED" : "Identity: VALID",
+                    soldLedger.isSold(quote.catchUid()) ? NamedTextColor.RED : NamedTextColor.GREEN));
+        } else {
+            lore.add(Component.text("Identity: LEGACY", NamedTextColor.YELLOW));
+        }
         return button(quote.fish().material(), quote.fish().displayName(), NamedTextColor.AQUA, lore);
     }
 
@@ -330,6 +416,7 @@ public final class FishMarketManager {
         return Math.round(value * 100.0) / 100.0;
     }
 
-    public record FishQuote(FishDefinition fish, double weight, int amount, double totalValue, boolean featured) {}
+    public record FishQuote(FishDefinition fish, double weight, int amount, double totalValue,
+                            boolean featured, String catchUid) {}
     public record SaleResult(boolean success, int amount, double total) {}
 }
