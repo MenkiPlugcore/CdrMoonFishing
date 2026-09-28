@@ -409,18 +409,33 @@ public final class FishingManager {
         World world = hookLocation.getWorld();
         if (world == null) return 0;
 
-        int depth = 0;
         int x = hookLocation.getBlockX();
         int z = hookLocation.getBlockZ();
-        int y = hookLocation.getBlockY() - 1;
-        int floor = Math.max(world.getMinHeight(), y - 64);
-        while (y >= floor) {
+        int y = hookLocation.getBlockY();
+
+        // The bobber normally sits inside the surface water block. Count that block as depth 1.
+        // Some client/server positions can resolve the bobber one block above the water surface,
+        // so fall back one block when the current block itself is not water.
+        if (!isWaterColumn(world.getBlockAt(x, y, z).getType())) {
+            int belowY = y - 1;
+            if (belowY < world.getMinHeight() || !isWaterColumn(world.getBlockAt(x, belowY, z).getType())) {
+                return 0;
+            }
+            y = belowY;
+        }
+
+        int depth = 0;
+        while (y >= world.getMinHeight() && depth < 64) {
             Material material = world.getBlockAt(x, y, z).getType();
-            if (material != Material.WATER && material != Material.BUBBLE_COLUMN) break;
+            if (!isWaterColumn(material)) break;
             depth++;
             y--;
         }
         return depth;
+    }
+
+    private boolean isWaterColumn(Material material) {
+        return material == Material.WATER || material == Material.BUBBLE_COLUMN;
     }
 
     private String weatherName(World world) {
