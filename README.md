@@ -4,7 +4,7 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 
 ## Current version
 
-`v0.6.0` — Tournament + Leaderboard
+`v0.7.0` — Custom Item Providers
 
 ## Implemented
 
@@ -20,9 +20,50 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 - Automatic tournament participation from successful catches
 - Persistent tournament state across restarts
 - Tournament history archive
-- Vault rewards for top 3
-- Pending reward queue if Vault/economy is unavailable during payout
+- Vault rewards for top 3 with pending reward retry
 - Lifetime global fishing leaderboards
+- Runtime ItemsAdder custom item provider
+- Runtime MMOItems custom item provider
+- AUTO provider mode with vanilla fallback
+- Provider name/lore preservation controls
+- CdrMoonFishing PDC metadata retained on provider-backed fish
+
+## Custom fish item providers
+
+Custom visuals are optional. Every fish keeps its existing `material` as a vanilla fallback, so gameplay never depends on ItemsAdder or MMOItems being online.
+
+Add an `item:` section to any fish in `fish.yml`:
+
+```yaml
+moon_koi:
+  display-name: "Moon Koi"
+  material: TROPICAL_FISH
+
+  item:
+    provider: AUTO
+    itemsadder-id: "moonfishing:moon_koi"
+    mmoitems-type: "MATERIAL"
+    mmoitems-id: "MOON_KOI"
+    preserve-provider-name: true
+    preserve-provider-lore: true
+```
+
+Supported provider modes:
+
+```text
+VANILLA     Always use the configured Bukkit material.
+ITEMSADDER  Use ItemsAdder; fall back to vanilla if unavailable/missing.
+MMOITEMS    Use MMOItems; fall back to vanilla if unavailable/missing.
+AUTO        Try ItemsAdder, then MMOItems, then vanilla.
+```
+
+ItemsAdder lookup uses the registered namespaced custom item ID. MMOItems uses a type + item ID pair.
+
+The provider item is applied only after a successful fishing encounter. CdrMoonFishing then transfers its catch metadata onto the provider-backed item, including species ID, rarity, weight, region, depth, catch timestamp, behavior and bait.
+
+Because price calculations read CdrMoonFishing PDC rather than the underlying material/model, custom ItemsAdder/MMOItems fish remain compatible with Fish Market selling, FishDex, statistics and tournament scoring.
+
+If an external item ID is missing or its plugin is offline, CdrMoonFishing logs a warning once and keeps the vanilla catch instead.
 
 ## Tournament
 
@@ -107,8 +148,6 @@ Metrics:
 - `biggest` — personal biggest fish
 - `legendary` — lifetime legendary catches
 
-The global board reads the persistent player profiles created by the FishDex/statistics system.
-
 ## Fish Market
 
 ```text
@@ -175,7 +214,7 @@ gradle clean build
 Output:
 
 ```text
-build/libs/CdrMoonFishing-0.6.0.jar
+build/libs/CdrMoonFishing-0.7.0.jar
 ```
 
 ## Commands
@@ -196,5 +235,5 @@ build/libs/CdrMoonFishing-0.6.0.jar
 
 ## Roadmap
 
-- v0.6.x — tournament polish, history browsing and seasonal boards
-- next — ItemsAdder/MMOItems item providers, custom visual assets and expanded fish catalog
+- v0.7.x — custom item/provider polish and custom visual asset mapping
+- next — expanded fish catalog, fishing regions/spots and encounter/environment polish
