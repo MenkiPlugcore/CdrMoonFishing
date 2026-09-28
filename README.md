@@ -4,104 +4,134 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 
 ## Current version
 
-`v0.4.0` — Rare & Legendary Encounter Phases
+`v0.5.0` — Economy & Fish Market
 
 ## Implemented
 
 - Vanilla fishing interception
-- Fish rarity and weighted encounter selection
-- Fish weight
-- Depth, biome, weather and time filters
+- Fish rarity, weight, depth, biome, weather and time conditions
 - Crossplay tension minigame
-- Custom fish PDC metadata
-- Bait registry and selectable bait items
-- Bait rarity/species multipliers
-- Required bait support for special fish
+- Bait system and required bait support
 - CALM, ERRATIC, AGGRESSIVE and DIVING fish behaviors
-- Configurable multi-phase encounter engine
-- Per-phase behavior overrides
-- Per-phase pull, safe-zone, reel-power and progress modifiers
-- Title, subtitle and sound phase transitions
-- Persistent FishDex discovery tracking
-- Per-species catch counts and personal best weights
-- Total catches and total caught weight
-- Rarity catch breakdown
-- Legendary catch count
-- Overall biggest catch record
-- YAML statistics storage per player UUID
-- Optional detection for Vault, ItemsAdder, MMOItems, Floodgate and Geyser
+- Rare/Epic/Legendary multi-phase encounter engine
+- Persistent FishDex and player statistics
+- Vault economy payout through a runtime-safe optional hook
+- Per-species `base-price-per-kg`
+- Configurable rarity and global price multipliers
+- Daily Featured Catch price bonus
+- Standard chest Fish Market GUI
+- Sell held fish / sell all custom fish
+- Transaction rollback when an economy deposit fails
+
+## Fish Market
+
+Open the market:
+
+```text
+/fishmarket
+/fishmarket open
+```
+
+Other commands:
+
+```text
+/fishmarket price
+/fishmarket sellhand
+/fishmarket sellall
+/fishmarket featured
+```
+
+Aliases: `/fmarket`, `/fishshop`.
+
+The GUI uses a normal server-side chest inventory, so it stays compatible with Java and Bedrock/Geyser players.
+
+### Price formula
+
+Fish value is calculated at sale time:
+
+```text
+base-price-per-kg
+× fish weight
+× rarity multiplier
+× global multiplier
+× Featured Catch multiplier (when active)
+```
+
+The item itself stores species and weight, not a fixed money value. This means economy balancing changes also affect fish that were caught before the configuration change.
+
+Default rarity multipliers:
+
+```text
+COMMON     1.00x
+UNCOMMON   1.10x
+RARE       1.30x
+EPIC       1.65x
+LEGENDARY  2.25x
+```
+
+Default species base prices:
+
+```text
+River Carp       12 / kg
+Silver Salmon    18 / kg
+Moon Koi         55 / kg
+Abyss Eel        90 / kg
+Lunar Leviathan 300 / kg
+```
+
+Every fish can override its value in `fish.yml`:
+
+```yaml
+base-price-per-kg: 55.0
+```
+
+Older fish configs without this field remain compatible and receive a rarity-based fallback base price.
+
+## Featured Catch
+
+One sellable species is selected deterministically each day. By default it receives a `1.35x` market bonus.
+
+```yaml
+economy:
+  market:
+    featured-enabled: true
+    featured-multiplier: 1.35
+    timezone: "Asia/Jakarta"
+```
+
+The same date always selects the same featured fish even after a server restart.
+
+## Vault
+
+Vault remains optional for the plugin as a whole. Fishing, FishDex and encounter gameplay still load without it.
+
+Selling requires:
+
+1. Vault
+2. an economy provider registered through Vault
+
+The plugin hooks Vault at runtime, so CdrMoonFishing does not need a hard compile dependency on VaultAPI.
+
+If a payout fails, removed fish are restored instead of being lost.
 
 ## Encounter phases
 
-Fish without a `phases:` section keep the normal v0.3 behavior. Multi-phase encounters are opt-in per species.
-
-A phase becomes active when catch progress reaches its `start-progress`. Each phase can change:
-
-- behavior (`CALM`, `ERRATIC`, `AGGRESSIVE`, `DIVING`)
-- pull multiplier
-- safe-zone minimum/maximum offsets
-- reel-power multiplier
-- catch-progress multiplier
-- transition title/subtitle
-- transition sound
-
-Example:
-
-```yaml
-phases:
-  phase_1:
-    display-name: "Phase I - Awakening"
-    start-progress: 0
-    behavior: AGGRESSIVE
-    pull-multiplier: 1.05
-    safe-min-offset: 0
-    safe-max-offset: -3
-    reel-power-multiplier: 1.0
-    progress-multiplier: 1.0
-    title: "§6§lLUNAR LEVIATHAN"
-    subtitle: "§ePHASE I §7- The ancient beast awakens"
-    sound: ENTITY_ENDER_DRAGON_GROWL
-```
-
-Phase transitions reset danger-grace accumulation but do not reset tension or catch progress.
+Fish without a `phases:` section use normal behavior. Multi-phase encounters can change behavior, pull strength, safe-zone width, reel power, progress speed and transition title/sound as catch progress increases.
 
 Default phased species:
 
-- `Moon Koi` — 2 phases
-- `Abyss Eel` — 3 phases
-- `Lunar Leviathan` — 3 phases
+- Moon Koi — 2 phases
+- Abyss Eel — 3 phases
+- Lunar Leviathan — 3 phases
 
-### Lunar Leviathan default fight
-
-1. **Phase I — Awakening** (`0%`) — aggressive opening pressure.
-2. **Phase II — Abyssal Dive** (`35%`) — switches to diving behavior, stronger pull and narrower safe zone.
-3. **Phase III — Final Struggle** (`72%`) — aggressive final assault, much stronger pull, weaker reel power and a very narrow safe zone.
-
-The Leviathan still requires `ancient_bait`, night, thunder and deep water according to the default fish configuration.
-
-## FishDex
-
-FishDex is updated only after a player successfully completes a fishing encounter. Moving, selling or dropping a fish item does not alter progression.
+## FishDex & statistics
 
 ```text
-/fishdex
-/fishdex <page>
+/fishdex [page]
+/fishing stats [player]
 ```
 
-Undiscovered species are hidden as `???`. Discovered entries show species name, catch count and the player's best recorded weight for that species.
-
-FishDex completion is calculated against the currently loaded `fish.yml`, so adding new species automatically expands the collection target.
-
-## Player statistics
-
-```text
-/fishing stats
-/fishing stats <player>
-```
-
-Tracked values include total catches, total weight, discovered species, rarity totals, legendary catches, biggest catch, per-species counts and best weights.
-
-Player profiles are stored in:
+FishDex records discoveries only after a successful encounter. Player data is stored under:
 
 ```text
 plugins/CdrMoonFishing/players/<uuid>.yml
@@ -110,28 +140,18 @@ plugins/CdrMoonFishing/players/<uuid>.yml
 ## Bait
 
 ```text
-/fishing bait
-/fishing bait <id>
-/fishing bait none
+/fishing bait [id|none]
 /fishing givebait <player> <id> [amount]
 ```
 
-Players can also right-click a CdrMoonFishing bait item to select it.
-
-Default bait IDs:
-
-- `worm`
-- `shrimp`
-- `glow_worm`
-- `moon_worm`
-- `ancient_bait`
+Players can also right-click CdrMoonFishing bait items to select them.
 
 ## Requirements
 
 - Paper 1.21.11
 - Java 21
 
-Optional integrations detected at runtime:
+Optional integrations:
 
 - Vault
 - ItemsAdder
@@ -148,14 +168,13 @@ gradle clean build
 Output:
 
 ```text
-build/libs/CdrMoonFishing-0.4.0.jar
+build/libs/CdrMoonFishing-0.5.0.jar
 ```
-
-A GitHub Actions workflow builds the plugin on pushes to `main`.
 
 ## Commands
 
 ```text
+/fishmarket [open|price|sellhand|sellall|featured]
 /fishdex [page]
 /fishing stats [player]
 /fishing bait [id|none]
@@ -168,7 +187,6 @@ A GitHub Actions workflow builds the plugin on pushes to `main`.
 
 ## Roadmap
 
-- v0.4.x — encounter balancing, phase effects and boss-fish polish
-- v0.5.x — economy integration and selling formulas
+- v0.5.x — market polish, sale statistics and economy balancing
 - v0.6.x — tournament and leaderboard system
 - later — ItemsAdder/MMOItems item providers and custom visual assets
