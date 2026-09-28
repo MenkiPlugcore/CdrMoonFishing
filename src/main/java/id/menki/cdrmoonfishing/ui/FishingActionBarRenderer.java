@@ -13,17 +13,15 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.Locale;
 
 /**
- * High-frequency visual action-bar overlay for active fishing encounters.
- *
- * FishingManager still owns all gameplay state. This renderer only presents that
- * state as a readable moving marker over danger/warning/safe zones.
+ * Lane-style action bar renderer for active fishing encounters.
+ * FishingManager owns gameplay state; this class only visualizes it.
  */
 public final class FishingActionBarRenderer {
-    private static final TextColor SAFE = TextColor.color(0x55E66A);
-    private static final TextColor WARNING = TextColor.color(0xFFD34E);
-    private static final TextColor DANGER = TextColor.color(0xFF5555);
-    private static final TextColor FRAME = TextColor.color(0x6D7B8A);
-    private static final TextColor MARKER = TextColor.color(0xF8FBFF);
+    private static final TextColor SAFE = TextColor.color(0xF5F7FA);
+    private static final TextColor WARNING = TextColor.color(0xB8C2CC);
+    private static final TextColor DANGER = TextColor.color(0x66717D);
+    private static final TextColor FRAME = TextColor.color(0xA9B4C0);
+    private static final TextColor MARKER = TextColor.color(0x61D7FF);
     private static final TextColor PROGRESS = TextColor.color(0x61D7FF);
 
     private final CdrMoonFishing plugin;
@@ -38,6 +36,13 @@ public final class FishingActionBarRenderer {
         task = plugin.getServer().getScheduler().runTaskTimer(plugin, this::renderActiveSessions, 1L, 1L);
     }
 
+    public void stop() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
+    }
+
     private void renderActiveSessions() {
         if (!plugin.getConfig().getBoolean("ui.action-bar.enabled", true)) return;
         if (plugin.getFishingManager() == null || plugin.getFishingManager().activeCount() <= 0) return;
@@ -50,9 +55,14 @@ public final class FishingActionBarRenderer {
 
     private Component render(FishingSession session) {
         int segments = Math.max(12, Math.min(40,
-                plugin.getConfig().getInt("ui.action-bar.segments", 24)));
-        String segmentGlyph = glyph("ui.action-bar.segment", "▬");
-        String markerGlyph = glyph("ui.action-bar.marker", "◆");
+                plugin.getConfig().getInt("ui.action-bar.segments", 20)));
+        String safeGlyph = glyph("ui.action-bar.safe-segment", "█");
+        String warningGlyph = glyph("ui.action-bar.warning-segment", "▒");
+        String dangerGlyph = glyph("ui.action-bar.danger-segment", "░");
+        String markerGlyph = glyph("ui.action-bar.marker", "│");
+        String leftFrame = plugin.getConfig().getString("ui.action-bar.left-frame", "[");
+        String rightFrame = plugin.getConfig().getString("ui.action-bar.right-frame", "]");
+        String prefix = plugin.getConfig().getString("ui.action-bar.prefix", "🎣 ");
 
         double tension = clamp(session.tension(), 0.0, 100.0);
         double[] safe = safeRange(session);
@@ -62,42 +72,42 @@ public final class FishingActionBarRenderer {
         int markerIndex = (int) Math.round((tension / 100.0) * (segments - 1));
         markerIndex = Math.max(0, Math.min(segments - 1, markerIndex));
 
-        Component bar = Component.text("[", FRAME);
+        Component lane = Component.text(prefix == null ? "" : prefix, NamedTextColor.AQUA)
+                .append(Component.text(leftFrame == null ? "[" : leftFrame, FRAME));
+
         for (int index = 0; index < segments; index++) {
             double position = segments <= 1 ? 0.0 : (index * 100.0 / (segments - 1));
             if (index == markerIndex) {
-                bar = bar.append(Component.text(markerGlyph, MARKER).decorate(TextDecoration.BOLD));
+                lane = lane.append(Component.text(markerGlyph, MARKER).decorate(TextDecoration.BOLD));
+                continue;
+            }
+
+            if (position <= dangerLow || position >= dangerHigh) {
+                lane = lane.append(Component.text(dangerGlyph, DANGER));
+            } else if (position >= safe[0] && position <= safe[1]) {
+                lane = lane.append(Component.text(safeGlyph, SAFE));
             } else {
-                bar = bar.append(Component.text(segmentGlyph, zoneColor(position, safe[0], safe[1], dangerLow, dangerHigh)));
+                lane = lane.append(Component.text(warningGlyph, WARNING));
             }
         }
-        bar = bar.append(Component.text("]", FRAME));
 
-        Component result = Component.text("LINE ", NamedTextColor.AQUA)
-                .append(bar);
-
-        if (plugin.getConfig().getBoolean("ui.action-bar.show-tension-percent", true)) {
-            result = result.append(Component.text(String.format(Locale.US, " %.0f%%", tension), NamedTextColor.WHITE));
-        }
+        lane = lane.append(Component.text(rightFrame == null ? "]" : rightFrame, FRAME));
 
         if (plugin.getConfig().getBoolean("ui.action-bar.show-catch-progress", true)) {
-            result = result.append(Component.text(String.format(Locale.US, "  CATCH %.0f%%", session.progress()), PROGRESS));
+            lane = lane.append(Component.text(String.format(Locale.US, " %.0f%%", session.progress()), PROGRESS));
+        }
+
+        if (plugin.getConfig().getBoolean("ui.action-bar.show-tension-percent", false)) {
+            lane = lane.append(Component.text(String.format(Locale.US, "  T %.0f%%", tension), NamedTextColor.GRAY));
         }
 
         if (plugin.getConfig().getBoolean("ui.action-bar.show-state", false)) {
             EncounterPhase phase = session.fish().phaseAt(session.progress());
             String state = phase == null ? session.fish().behavior().displayName() : phase.displayName();
-            result = result.append(Component.text("  " + state, NamedTextColor.LIGHT_PURPLE));
+            lane = lane.append(Component.text("  " + state, NamedTextColor.LIGHT_PURPLE));
         }
 
-        return result;
-    }
-
-    private TextColor zoneColor(double position, double safeMin, double safeMax,
-                                double dangerLow, double dangerHigh) {
-        if (position <= dangerLow || position >= dangerHigh) return DANGER;
-        if (position >= safeMin && position <= safeMax) return SAFE;
-        return WARNING;
+        return lane;
     }
 
     private double[] safeRange(FishingSession session) {
