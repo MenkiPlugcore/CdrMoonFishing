@@ -1,5 +1,6 @@
 package id.menki.cdrmoonfishing.command;
 
+import id.menki.cdrmoonfishing.CdrMoonFishing;
 import id.menki.cdrmoonfishing.leaderboard.GlobalLeaderboardManager;
 import id.menki.cdrmoonfishing.leaderboard.GlobalLeaderboardManager.Entry;
 import id.menki.cdrmoonfishing.leaderboard.LeaderboardMetric;
@@ -9,15 +10,18 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.Locale;
 
 public final class FishLeaderboardCommand implements CommandExecutor, TabCompleter {
-    private static final int PAGE_SIZE = 10;
+    private static final int PAGE_SIZE = 45;
+    private final CdrMoonFishing plugin;
     private final GlobalLeaderboardManager manager;
 
-    public FishLeaderboardCommand(GlobalLeaderboardManager manager) {
+    public FishLeaderboardCommand(CdrMoonFishing plugin, GlobalLeaderboardManager manager) {
+        this.plugin = plugin;
         this.manager = manager;
     }
 
@@ -34,6 +38,11 @@ public final class FishLeaderboardCommand implements CommandExecutor, TabComplet
             }
         }
 
+        if (sender instanceof Player player) {
+            plugin.getFishingUiManager().openLeaderboard(player, metric, requestedPage);
+            return true;
+        }
+
         List<Entry> ranking = manager.ranking(metric);
         if (ranking.isEmpty()) {
             sender.sendMessage(Component.text("Fishing leaderboard is empty.", NamedTextColor.GRAY));
@@ -44,17 +53,11 @@ public final class FishLeaderboardCommand implements CommandExecutor, TabComplet
         int page = Math.min(requestedPage, maxPage);
         int start = (page - 1) * PAGE_SIZE;
         int end = Math.min(ranking.size(), start + PAGE_SIZE);
-
         sender.sendMessage(Component.text("━━━━ GLOBAL FISHING • " + metric.displayName().toUpperCase(Locale.ROOT) + " ━━━━", NamedTextColor.AQUA));
         for (int i = start; i < end; i++) {
             Entry entry = ranking.get(i);
-            int place = i + 1;
-            NamedTextColor color = place == 1 ? NamedTextColor.GOLD
-                    : place <= 3 ? NamedTextColor.AQUA : NamedTextColor.GRAY;
-            sender.sendMessage(Component.text("#" + place + " " + entry.name() + " • " + manager.formatValue(metric, entry), color));
+            sender.sendMessage(Component.text("#" + (i + 1) + " " + entry.name() + " • " + manager.formatValue(metric, entry), NamedTextColor.GRAY));
         }
-        sender.sendMessage(Component.text("Page " + page + "/" + maxPage + " • /" + label + " <catches|weight|biggest|legendary> [page]",
-                NamedTextColor.DARK_GRAY));
         return true;
     }
 
