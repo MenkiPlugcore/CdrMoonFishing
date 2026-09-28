@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.function.ToDoubleFunction;
 
 public final class RodManager {
     private static final int BAR_LENGTH = 12;
@@ -29,6 +30,7 @@ public final class RodManager {
     private final NamespacedKey rodIdKey;
     private final NamespacedKey rodXpKey;
     private final NamespacedKey rodTierKey;
+    private ToDoubleFunction<Player> collectionLuckProvider = player -> 0.0;
 
     public RodManager(JavaPlugin plugin, RodRegistry registry) {
         this.plugin = plugin;
@@ -81,9 +83,10 @@ public final class RodManager {
 
     public double rarityMultiplier(Player player, FishDefinition fish) {
         RodTierDefinition tier = tier(player.getInventory().getItemInMainHand());
-        if (tier == null) return 1.0;
+        double rodLuck = tier == null ? 0.0 : tier.rarityLuck();
+        double collectionLuck = Math.max(0.0, collectionLuckProvider.applyAsDouble(player));
+        double luck = rodLuck + collectionLuck;
 
-        double luck = tier.rarityLuck();
         return switch (fish.rarity()) {
             case COMMON -> 1.0;
             case UNCOMMON -> 1.0 + (luck * 0.50);
@@ -91,6 +94,10 @@ public final class RodManager {
             case EPIC -> 1.0 + (luck * 1.50);
             case LEGENDARY -> 1.0 + (luck * 2.00);
         };
+    }
+
+    public void setCollectionLuckProvider(ToDoubleFunction<Player> provider) {
+        this.collectionLuckProvider = provider == null ? player -> 0.0 : provider;
     }
 
     public void recordCatch(Player player, FishDefinition fish, double weight) {
@@ -153,7 +160,7 @@ public final class RodManager {
         lore.add(Component.text("Tier: ", NamedTextColor.GRAY)
                 .append(Component.text(tier.displayName(), NamedTextColor.AQUA)));
         lore.add(Component.text(String.format(Locale.US, "Reel Power: %.2fx", tier.reelMultiplier()), NamedTextColor.GRAY));
-        lore.add(Component.text(String.format(Locale.US, "Rarity Luck: +%.0f%%", tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
+        lore.add(Component.text(String.format(Locale.US, "Rod Rarity Luck: +%.0f%%", tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
         lore.add(Component.text(String.format(Locale.US, "Rod XP Gain: %.2fx", tier.xpMultiplier()), NamedTextColor.GRAY));
         lore.add(Component.empty());
 
