@@ -20,7 +20,8 @@ public record FishDefinition(
         List<String> biomes,
         List<String> weather,
         List<String> time,
-        List<String> requiredBaits
+        List<String> requiredBaits,
+        List<EncounterPhase> phases
 ) {
     public boolean matches(String biomeName, int depth, String weatherName, String timeName, String baitId) {
         if (depth < minDepth || depth > maxDepth) {
@@ -41,5 +42,16 @@ public record FishDefinition(
                 || (baitId != null && requiredBaits.stream().anyMatch(entry -> entry.equalsIgnoreCase(baitId)));
 
         return biomeOk && weatherOk && timeOk && baitOk;
+    }
+
+    public EncounterPhase phaseAt(double progress) {
+        EncounterPhase current = null;
+        for (EncounterPhase phase : phases) {
+            if (progress + 0.0001 < phase.startProgress()) {
+                break;
+            }
+            current = phase;
+        }
+        return current;
     }
 }
