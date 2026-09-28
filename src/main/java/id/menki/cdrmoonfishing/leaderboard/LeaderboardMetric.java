@@ -3,10 +3,10 @@ package id.menki.cdrmoonfishing.leaderboard;
 import java.util.Locale;
 
 public enum LeaderboardMetric {
-    CATCHES("Total Catches"),
-    WEIGHT("Total Weight"),
-    BIGGEST("Biggest Catch"),
-    LEGENDARY("Legendary Catches");
+    CATCHES("Total Tangkapan"),
+    WEIGHT("Total Berat"),
+    BIGGEST("Tangkapan Terbesar"),
+    LEGENDARY("Tangkapan Legendaris");
 
     private final String displayName;
 
