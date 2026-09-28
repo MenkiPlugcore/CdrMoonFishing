@@ -49,6 +49,31 @@ fish:
     weather: ["CLEAR", "RAIN"]
     time: ["NIGHT"]
     required-baits: []
+    phases:
+      moon_dance:
+        display-name: "Moon Dance"
+        start-progress: 0
+        behavior: ERRATIC
+        pull-multiplier: 1.0
+        safe-min-offset: 0
+        safe-max-offset: 0
+        reel-power-multiplier: 1.0
+        progress-multiplier: 1.0
+        title: "§d§lMOON KOI"
+        subtitle: "§7Follow its strange rhythm..."
+        sound: BLOCK_NOTE_BLOCK_CHIME
+      final_dance:
+        display-name: "Final Dance"
+        start-progress: 65
+        behavior: AGGRESSIVE
+        pull-multiplier: 1.18
+        safe-min-offset: 5
+        safe-max-offset: -8
+        reel-power-multiplier: 0.92
+        progress-multiplier: 0.85
+        title: "§d§lFINAL DANCE"
+        subtitle: "§fThe Moon Koi fights back!"
+        sound: ENTITY_FISHING_BOBBER_SPLASH
 
   abyss_eel:
     display-name: "Abyss Eel"
@@ -66,6 +91,43 @@ fish:
     weather: ["ANY"]
     time: ["NIGHT"]
     required-baits: []
+    phases:
+      deep_stalk:
+        display-name: "Deep Stalk"
+        start-progress: 0
+        behavior: DIVING
+        pull-multiplier: 1.0
+        safe-min-offset: 0
+        safe-max-offset: 0
+        reel-power-multiplier: 1.0
+        progress-multiplier: 1.0
+        title: "§5§lABYSS EEL"
+        subtitle: "§7Something circles beneath you..."
+        sound: BLOCK_NOTE_BLOCK_BASS
+      abyssal_dive:
+        display-name: "Abyssal Dive"
+        start-progress: 45
+        behavior: DIVING
+        pull-multiplier: 1.20
+        safe-min-offset: 5
+        safe-max-offset: -5
+        reel-power-multiplier: 0.94
+        progress-multiplier: 0.90
+        title: "§5§lABYSSAL DIVE"
+        subtitle: "§dIt dives into the darkness!"
+        sound: ENTITY_FISHING_BOBBER_SPLASH
+      desperate_rush:
+        display-name: "Desperate Rush"
+        start-progress: 78
+        behavior: AGGRESSIVE
+        pull-multiplier: 1.35
+        safe-min-offset: 8
+        safe-max-offset: -10
+        reel-power-multiplier: 0.88
+        progress-multiplier: 0.80
+        title: "§c§lDESPERATE RUSH"
+        subtitle: "§7Don't let the line snap!"
+        sound: ENTITY_ENDER_DRAGON_GROWL
 
   lunar_leviathan:
     display-name: "Lunar Leviathan"
@@ -83,3 +145,40 @@ fish:
     weather: ["THUNDER"]
     time: ["NIGHT"]
     required-baits: ["ancient_bait"]
+    phases:
+      awakening:
+        display-name: "Phase I - Awakening"
+        start-progress: 0
+        behavior: AGGRESSIVE
+        pull-multiplier: 1.05
+        safe-min-offset: 0
+        safe-max-offset: -3
+        reel-power-multiplier: 1.0
+        progress-multiplier: 1.0
+        title: "§6§lLUNAR LEVIATHAN"
+        subtitle: "§ePHASE I §7- The ancient beast awakens"
+        sound: ENTITY_ENDER_DRAGON_GROWL
+      abyssal_dive:
+        display-name: "Phase II - Abyssal Dive"
+        start-progress: 35
+        behavior: DIVING
+        pull-multiplier: 1.30
+        safe-min-offset: 8
+        safe-max-offset: -8
+        reel-power-multiplier: 0.90
+        progress-multiplier: 0.85
+        title: "§5§lABYSSAL DIVE"
+        subtitle: "§dPHASE II §7- It drags the line into the abyss!"
+        sound: ENTITY_FISHING_BOBBER_SPLASH
+      final_struggle:
+        display-name: "Phase III - Final Struggle"
+        start-progress: 72
+        behavior: AGGRESSIVE
+        pull-multiplier: 1.60
+        safe-min-offset: 12
+        safe-max-offset: -15
+        reel-power-multiplier: 0.78
+        progress-multiplier: 0.70
+        title: "§4§lFINAL STRUGGLE"
+        subtitle: "§cPHASE III §7- Survive the last assault!"
+        sound: ENTITY_ENDER_DRAGON_GROWL
