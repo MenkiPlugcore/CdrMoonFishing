@@ -97,14 +97,27 @@ public final class RodManager {
         ItemStack rod = player.getInventory().getItemInMainHand();
         if (!isProgressionRod(rod)) return;
 
-        RodTierDefinition before = tier(rod);
-        if (before == null) return;
+        RodTierDefinition tier = tier(rod);
+        if (tier == null) return;
 
         int base = registry.baseXp(fish.rarity().name(), defaultBaseXp(fish.rarity()));
-        double raw = (base + (weight * registry.weightXpMultiplier())) * before.xpMultiplier();
+        double raw = (base + (weight * registry.weightXpMultiplier())) * tier.xpMultiplier();
         int gain = Math.max(1, (int) Math.round(raw));
-        int newXp = xp(rod) + gain;
+        addXp(player, gain);
+    }
 
+    public boolean addXp(Player player, int amount) {
+        if (amount <= 0) return false;
+        ItemStack rod = player.getInventory().getItemInMainHand();
+        if (!isProgressionRod(rod)) {
+            player.sendMessage(Component.text("Rod XP reward skipped: hold a CdrMoonFishing progression rod.", NamedTextColor.YELLOW));
+            return false;
+        }
+
+        RodTierDefinition before = tier(rod);
+        if (before == null) return false;
+
+        int newXp = xp(rod) + amount;
         ItemMeta meta = rod.getItemMeta();
         meta.getPersistentDataContainer().set(rodXpKey, PersistentDataType.INTEGER, newXp);
         RodTierDefinition after = registry.tierForXp(newXp);
@@ -114,13 +127,14 @@ public final class RodManager {
         rod.setItemMeta(meta);
         refreshMeta(rod);
 
-        player.sendActionBar(Component.text("Rod XP +" + gain + " • " + newXp + " XP", NamedTextColor.AQUA));
+        player.sendActionBar(Component.text("Rod XP +" + amount + " • " + newXp + " XP", NamedTextColor.AQUA));
         if (after != null && !after.id().equals(before.id())) {
             player.sendTitle("§b§lROD UPGRADED!", "§f" + after.displayName(), 5, 40, 10);
             player.sendMessage(Component.text("Fishing Rod upgraded to ", NamedTextColor.GRAY)
                     .append(Component.text(after.displayName(), NamedTextColor.AQUA).decorate(TextDecoration.BOLD)));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.35f);
         }
+        return true;
     }
 
     public void refreshMeta(ItemStack rod) {
