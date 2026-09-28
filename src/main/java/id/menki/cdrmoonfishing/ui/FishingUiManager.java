@@ -1,10 +1,13 @@
 package id.menki.cdrmoonfishing.ui;
 
 import id.menki.cdrmoonfishing.CdrMoonFishing;
+import id.menki.cdrmoonfishing.contracts.ContractManager.ContractProgress;
 import id.menki.cdrmoonfishing.leaderboard.GlobalLeaderboardManager;
 import id.menki.cdrmoonfishing.leaderboard.LeaderboardMetric;
+import id.menki.cdrmoonfishing.model.BaitDefinition;
 import id.menki.cdrmoonfishing.model.FishDefinition;
 import id.menki.cdrmoonfishing.model.FishRarity;
+import id.menki.cdrmoonfishing.model.RodTierDefinition;
 import id.menki.cdrmoonfishing.stats.PlayerStatsManager.FishDexEntry;
 import id.menki.cdrmoonfishing.stats.PlayerStatsManager.StatsSnapshot;
 import id.menki.cdrmoonfishing.tournament.TournamentManager;
@@ -29,12 +32,134 @@ public final class FishingUiManager {
     private static final int PAGE_SIZE = 45;
     private static final int SLOT_PREV = 45;
     private static final int SLOT_INFO = 49;
+    private static final int SLOT_HOME = 52;
     private static final int SLOT_NEXT = 53;
+
+    private static final int HUB_FISHDEX = 10;
+    private static final int HUB_ROD = 11;
+    private static final int HUB_CONTRACTS = 12;
+    private static final int HUB_STATUS = 13;
+    private static final int HUB_MARKET = 14;
+    private static final int HUB_TOURNAMENT = 15;
+    private static final int HUB_STATS = 16;
+    private static final int HUB_REFRESH = 21;
+    private static final int HUB_CLOSE = 23;
 
     private final CdrMoonFishing plugin;
 
     public FishingUiManager(CdrMoonFishing plugin) {
         this.plugin = plugin;
+    }
+
+    public void openHub(Player player) {
+        Inventory inventory = Bukkit.createInventory(new HubHolder(), 27,
+                Component.text("☾ CdrMoonFishing", NamedTextColor.DARK_AQUA));
+
+        ItemStack dark = filler(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack blue = filler(Material.BLUE_STAINED_GLASS_PANE);
+        for (int slot = 0; slot < inventory.getSize(); slot++) inventory.setItem(slot, dark);
+        for (int slot = 0; slot < 9; slot++) inventory.setItem(slot, blue);
+        for (int slot = 18; slot < 27; slot++) inventory.setItem(slot, blue);
+
+        StatsSnapshot stats = plugin.getPlayerStatsManager().snapshot(player);
+        int totalFish = plugin.getFishRegistry().definitions().size();
+        int discovered = activeDiscovered(player);
+        double completion = totalFish == 0 ? 0.0 : discovered * 100.0 / totalFish;
+        double collectionLuck = plugin.getMilestoneManager().collectionLuck(player);
+
+        inventory.setItem(4, button(Material.HEART_OF_THE_SEA, "Moon Fishing", NamedTextColor.AQUA,
+                List.of(
+                        Component.text("Simple fishing hub", NamedTextColor.GRAY),
+                        Component.text("Java + Bedrock friendly", NamedTextColor.DARK_GRAY)
+                )));
+
+        inventory.setItem(HUB_FISHDEX, button(Material.KNOWLEDGE_BOOK, "FishDex", NamedTextColor.AQUA,
+                List.of(
+                        Component.text("Collection " + discovered + "/" + totalFish, NamedTextColor.GRAY),
+                        Component.text(String.format(Locale.US, "%.1f%% completed", completion), NamedTextColor.GREEN),
+                        Component.text(String.format(Locale.US, "+%.0f%% Collection Luck", collectionLuck * 100.0), NamedTextColor.LIGHT_PURPLE),
+                        Component.text("Click to open FishDex", NamedTextColor.DARK_GRAY)
+                )));
+
+        ItemStack heldRod = player.getInventory().getItemInMainHand();
+        RodTierDefinition tier = plugin.getRodManager().tier(heldRod);
+        List<Component> rodLore = new ArrayList<>();
+        if (tier == null) {
+            rodLore.add(Component.text("No progression rod held", NamedTextColor.GRAY));
+            rodLore.add(Component.text("Hold your CdrMoonFishing rod", NamedTextColor.DARK_GRAY));
+        } else {
+            int xp = plugin.getRodManager().xp(heldRod);
+            RodTierDefinition next = plugin.getRodRegistry().nextTier(tier);
+            rodLore.add(Component.text("Tier: " + tier.displayName(), NamedTextColor.AQUA));
+            rodLore.add(Component.text("XP: " + xp + (next == null ? " • MAX" : " / " + next.minXp()), NamedTextColor.GRAY));
+            rodLore.add(Component.text(String.format(Locale.US, "Luck +%.0f%% • Reel %.2fx",
+                    tier.rarityLuck() * 100.0, tier.reelMultiplier()), NamedTextColor.LIGHT_PURPLE));
+        }
+        rodLore.add(Component.text("Click for rod details", NamedTextColor.DARK_GRAY));
+        inventory.setItem(HUB_ROD, button(Material.FISHING_ROD, "Fishing Rod", NamedTextColor.AQUA, rodLore));
+
+        List<ContractProgress> contracts = plugin.getContractManager().progress(player);
+        long completedContracts = contracts.stream().filter(ContractProgress::completed).count();
+        List<Component> contractLore = new ArrayList<>();
+        contractLore.add(Component.text("Today: " + completedContracts + "/" + contracts.size() + " complete",
+                completedContracts == contracts.size() && !contracts.isEmpty() ? NamedTextColor.GREEN : NamedTextColor.GRAY));
+        for (ContractProgress progress : contracts.stream().limit(2).toList()) {
+            String marker = progress.completed() ? "✔ " : "• ";
+            contractLore.add(Component.text(marker + progress.definition().displayName(),
+                    progress.completed() ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
+        }
+        contractLore.add(Component.text("Click to view contracts", NamedTextColor.DARK_GRAY));
+        inventory.setItem(HUB_CONTRACTS, button(Material.WRITABLE_BOOK, "Daily Contracts", NamedTextColor.GOLD, contractLore));
+
+        BaitDefinition selectedBait = plugin.getBaitManager().selected(player);
+        FishDefinition featured = plugin.getFishMarketManager().featuredFish();
+        List<Component> statusLore = new ArrayList<>();
+        statusLore.add(Component.text("Player: " + player.getName(), NamedTextColor.WHITE));
+        statusLore.add(Component.text(String.format(Locale.US, "FishDex: %.1f%%", completion), NamedTextColor.AQUA));
+        statusLore.add(Component.text("Bait: " + (selectedBait == null ? "None" : selectedBait.displayName()),
+                selectedBait == null ? NamedTextColor.GRAY : NamedTextColor.GOLD));
+        statusLore.add(Component.text("Featured: " + (featured == null ? "None" : featured.displayName()),
+                featured == null ? NamedTextColor.GRAY : NamedTextColor.LIGHT_PURPLE));
+        inventory.setItem(HUB_STATUS, button(Material.NAUTILUS_SHELL, "Fishing Status", NamedTextColor.WHITE, statusLore));
+
+        List<Component> marketLore = new ArrayList<>();
+        if (featured != null) {
+            double multiplier = Math.max(1.0, plugin.getConfig().getDouble("economy.market.featured-multiplier", 1.35));
+            marketLore.add(Component.text("Featured: " + featured.displayName(), NamedTextColor.GOLD));
+            marketLore.add(Component.text(String.format(Locale.US, "Market bonus x%.2f", multiplier), NamedTextColor.GREEN));
+        } else {
+            marketLore.add(Component.text("No featured catch today", NamedTextColor.GRAY));
+        }
+        marketLore.add(Component.text("Click to open market", NamedTextColor.DARK_GRAY));
+        inventory.setItem(HUB_MARKET, button(Material.EMERALD, "Fish Market", NamedTextColor.GREEN, marketLore));
+
+        TournamentManager tournament = plugin.getTournamentManager();
+        List<Component> tournamentLore = new ArrayList<>();
+        if (tournament.isActive()) {
+            tournamentLore.add(Component.text("ACTIVE • " + tournament.mode().displayName(), NamedTextColor.GREEN));
+            tournamentLore.add(Component.text("Remaining: " + formatDuration(tournament.remainingMillis() / 1000L), NamedTextColor.GRAY));
+            tournamentLore.add(Component.text("Participants: " + tournament.participantCount(), NamedTextColor.GRAY));
+        } else {
+            tournamentLore.add(Component.text("No active tournament", NamedTextColor.GRAY));
+        }
+        tournamentLore.add(Component.text("Click to open tournament", NamedTextColor.DARK_GRAY));
+        inventory.setItem(HUB_TOURNAMENT, button(Material.GOLD_BLOCK, "Tournament", NamedTextColor.GOLD, tournamentLore));
+
+        List<Component> statsLore = new ArrayList<>();
+        statsLore.add(Component.text("Total catches: " + stats.totalCatches(), NamedTextColor.GRAY));
+        statsLore.add(Component.text(String.format(Locale.US, "Total weight: %.2f kg", stats.totalWeight()), NamedTextColor.GRAY));
+        if (stats.biggestWeight() > 0.0) {
+            statsLore.add(Component.text(String.format(Locale.US, "Biggest: %.2f kg", stats.biggestWeight()), NamedTextColor.GREEN));
+        }
+        statsLore.add(Component.text("Click for global rankings", NamedTextColor.DARK_GRAY));
+        inventory.setItem(HUB_STATS, button(Material.COMPASS, "Stats & Rankings", NamedTextColor.AQUA, statsLore));
+
+        inventory.setItem(HUB_REFRESH, button(Material.CLOCK, "Refresh", NamedTextColor.AQUA,
+                List.of(Component.text("Refresh menu data", NamedTextColor.GRAY))));
+        inventory.setItem(HUB_CLOSE, button(Material.BARRIER, "Close", NamedTextColor.RED,
+                List.of(Component.text("Close fishing menu", NamedTextColor.GRAY))));
+
+        player.openInventory(inventory);
     }
 
     public void openFishDex(Player player, int requestedPage) {
@@ -53,7 +178,6 @@ public final class FishingUiManager {
         }
 
         fillNavigation(inventory, page, maxPage);
-        StatsSnapshot stats = plugin.getPlayerStatsManager().snapshot(player);
         int discovered = activeDiscovered(player);
         double completion = fish.isEmpty() ? 0.0 : discovered * 100.0 / fish.size();
         List<Component> lore = new ArrayList<>();
@@ -63,6 +187,7 @@ public final class FishingUiManager {
                 plugin.getMilestoneManager().collectionLuck(player) * 100.0), NamedTextColor.LIGHT_PURPLE));
         lore.add(Component.text("Click to view milestone progress.", NamedTextColor.DARK_GRAY));
         inventory.setItem(SLOT_INFO, button(Material.KNOWLEDGE_BOOK, "FishDex Progress", NamedTextColor.AQUA, lore));
+        inventory.setItem(SLOT_HOME, homeButton());
         player.openInventory(inventory);
     }
 
@@ -92,6 +217,7 @@ public final class FishingUiManager {
         inventory.setItem(50, metricButton(LeaderboardMetric.LEGENDARY, metric));
         inventory.setItem(SLOT_INFO, button(Material.COMPASS, "Lifetime Rankings", NamedTextColor.AQUA,
                 List.of(Component.text("Click a metric below to switch leaderboard.", NamedTextColor.GRAY))));
+        inventory.setItem(SLOT_HOME, homeButton());
         player.openInventory(inventory);
     }
 
@@ -132,19 +258,43 @@ public final class FishingUiManager {
             info.add(Component.text("Participants: " + manager.participantCount(), NamedTextColor.GRAY));
         }
         inventory.setItem(SLOT_INFO, button(Material.CLOCK, "Tournament Status", NamedTextColor.AQUA, info));
+        inventory.setItem(SLOT_HOME, homeButton());
         player.openInventory(inventory);
     }
 
     public boolean isManaged(Inventory inventory) {
-        return inventory != null && (inventory.getHolder() instanceof FishDexHolder
+        return inventory != null && (inventory.getHolder() instanceof HubHolder
+                || inventory.getHolder() instanceof FishDexHolder
                 || inventory.getHolder() instanceof LeaderboardHolder
                 || inventory.getHolder() instanceof TournamentHolder);
     }
 
     public void handleClick(Player player, Inventory inventory, int rawSlot) {
+        if (inventory.getHolder() instanceof HubHolder) {
+            switch (rawSlot) {
+                case HUB_FISHDEX -> openFishDex(player, 1);
+                case HUB_ROD -> {
+                    player.closeInventory();
+                    player.performCommand("fishrod info");
+                }
+                case HUB_CONTRACTS -> {
+                    player.closeInventory();
+                    player.performCommand("fishcontracts");
+                }
+                case HUB_MARKET -> plugin.getFishMarketManager().open(player);
+                case HUB_TOURNAMENT -> openTournament(player, 1);
+                case HUB_STATS -> openLeaderboard(player, LeaderboardMetric.CATCHES, 1);
+                case HUB_REFRESH -> openHub(player);
+                case HUB_CLOSE -> player.closeInventory();
+                default -> { }
+            }
+            return;
+        }
+
         if (inventory.getHolder() instanceof FishDexHolder holder) {
             if (rawSlot == SLOT_PREV) openFishDex(player, holder.page() - 1);
             else if (rawSlot == SLOT_NEXT) openFishDex(player, holder.page() + 1);
+            else if (rawSlot == SLOT_HOME) openHub(player);
             else if (rawSlot == SLOT_INFO) {
                 player.closeInventory();
                 plugin.getMilestoneManager().sendStatus(player);
@@ -155,6 +305,7 @@ public final class FishingUiManager {
         if (inventory.getHolder() instanceof LeaderboardHolder holder) {
             if (rawSlot == SLOT_PREV) openLeaderboard(player, holder.metric(), holder.page() - 1);
             else if (rawSlot == SLOT_NEXT) openLeaderboard(player, holder.metric(), holder.page() + 1);
+            else if (rawSlot == SLOT_HOME) openHub(player);
             else if (rawSlot == 46) openLeaderboard(player, LeaderboardMetric.CATCHES, 1);
             else if (rawSlot == 47) openLeaderboard(player, LeaderboardMetric.WEIGHT, 1);
             else if (rawSlot == 48) openLeaderboard(player, LeaderboardMetric.BIGGEST, 1);
@@ -165,6 +316,7 @@ public final class FishingUiManager {
         if (inventory.getHolder() instanceof TournamentHolder holder) {
             if (rawSlot == SLOT_PREV) openTournament(player, holder.page() - 1);
             else if (rawSlot == SLOT_NEXT) openTournament(player, holder.page() + 1);
+            else if (rawSlot == SLOT_HOME) openHub(player);
         }
     }
 
@@ -197,6 +349,19 @@ public final class FishingUiManager {
                 List.of(Component.text("Page " + Math.max(1, page - 1), NamedTextColor.GRAY))));
         inventory.setItem(SLOT_NEXT, button(Material.ARROW, "Next Page", NamedTextColor.AQUA,
                 List.of(Component.text("Page " + Math.min(maxPage, page + 1), NamedTextColor.GRAY))));
+    }
+
+    private ItemStack homeButton() {
+        return button(Material.HEART_OF_THE_SEA, "Fishing Hub", NamedTextColor.AQUA,
+                List.of(Component.text("Back to main menu", NamedTextColor.GRAY)));
+    }
+
+    private ItemStack filler(Material material) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.empty());
+        item.setItemMeta(meta);
+        return item;
     }
 
     private ItemStack button(Material material, String name, NamedTextColor color, List<Component> lore) {
@@ -243,6 +408,10 @@ public final class FishingUiManager {
         long minutes = Math.max(0, seconds) / 60L;
         long remain = Math.max(0, seconds) % 60L;
         return String.format(Locale.US, "%02d:%02d", minutes, remain);
+    }
+
+    public record HubHolder() implements InventoryHolder {
+        @Override public Inventory getInventory() { return null; }
     }
 
     public record FishDexHolder(int page) implements InventoryHolder {
