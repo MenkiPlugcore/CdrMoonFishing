@@ -10,6 +10,7 @@ import id.menki.cdrmoonfishing.command.FishMilestonesCommand;
 import id.menki.cdrmoonfishing.command.FishRodCommand;
 import id.menki.cdrmoonfishing.command.FishTournamentCommand;
 import id.menki.cdrmoonfishing.command.FishingCommand;
+import id.menki.cdrmoonfishing.command.FishingHubCommand;
 import id.menki.cdrmoonfishing.contracts.ContractManager;
 import id.menki.cdrmoonfishing.economy.VaultEconomyHook;
 import id.menki.cdrmoonfishing.fishing.FishingManager;
@@ -102,6 +103,11 @@ public final class CdrMoonFishing extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new FishMarketListener(fishMarketManager), this);
         getServer().getPluginManager().registerEvents(new FishingUiListener(fishingUiManager), this);
 
+        PluginCommand cdrFish = getCommand("cdrfish");
+        if (cdrFish != null) {
+            cdrFish.setExecutor(new FishingHubCommand(fishingUiManager));
+        } else getLogger().severe("Command 'cdrfish' is missing from plugin.yml.");
+
         FishingCommand fishingCommand = new FishingCommand(this);
         PluginCommand command = getCommand("fishing");
         if (command != null) {
@@ -164,7 +170,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         } else getLogger().severe("Command 'fishdoctor' is missing from plugin.yml.");
 
         getLogger().info("CdrMoonFishing v" + getPluginMeta().getVersion() + " enabled.");
-        getLogger().info("Production UI: FishDex + global leaderboard + tournament chest GUIs enabled.");
+        getLogger().info("Production UI: Fishing Hub + FishDex + global leaderboard + tournament chest GUIs enabled.");
         getLogger().info("Market security: unique catch identity + redemption ledger enabled.");
         getLogger().info("Fishing rod progression: " + rodRegistry.tiers().size() + " tiers loaded.");
         getLogger().info("FishDex milestones: " + milestoneManager.definitionCount() + " definitions loaded.");
