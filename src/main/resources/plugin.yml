@@ -11,6 +11,10 @@ softdepend:
   - floodgate
   - Geyser-Spigot
 commands:
+  cdrfish:
+    description: Open the CdrMoonFishing main hub
+    usage: /cdrfish
+    aliases: [fish]
   fishing:
     description: Main CdrMoonFishing command
     usage: /fishing [bait|stats|givebait|reload|debug|status|cancel]
