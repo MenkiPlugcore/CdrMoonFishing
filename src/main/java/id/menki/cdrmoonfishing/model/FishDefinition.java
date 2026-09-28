@@ -1,5 +1,6 @@
 package id.menki.cdrmoonfishing.model;
 
+import id.menki.cdrmoonfishing.item.FishItemDefinition;
 import org.bukkit.Material;
 
 import java.util.List;
@@ -8,6 +9,7 @@ public record FishDefinition(
         String id,
         String displayName,
         Material material,
+        FishItemDefinition itemDefinition,
         FishRarity rarity,
         FishBehavior behavior,
         double chance,
