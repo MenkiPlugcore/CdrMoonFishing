@@ -9,6 +9,8 @@ public final class FishingSession {
     private final FishDefinition fish;
     private final String region;
     private final int depth;
+    private final String weather;
+    private final String time;
     private final String baitId;
     private final long startedAt;
 
@@ -19,11 +21,13 @@ public final class FishingSession {
     private long lastPulseAt;
     private String activePhaseId;
 
-    public FishingSession(UUID playerId, FishDefinition fish, String region, int depth, String baitId, double startTension) {
+    public FishingSession(UUID playerId, FishDefinition fish, String region, int depth, String weather, String time, String baitId, double startTension) {
         this.playerId = playerId;
         this.fish = fish;
         this.region = region;
         this.depth = depth;
+        this.weather = weather;
+        this.time = time;
         this.baitId = baitId;
         this.startedAt = System.currentTimeMillis();
         this.tension = startTension;
@@ -33,6 +37,8 @@ public final class FishingSession {
     public FishDefinition fish() { return fish; }
     public String region() { return region; }
     public int depth() { return depth; }
+    public String weather() { return weather; }
+    public String time() { return time; }
     public String baitId() { return baitId; }
     public long startedAt() { return startedAt; }
     public double tension() { return tension; }
