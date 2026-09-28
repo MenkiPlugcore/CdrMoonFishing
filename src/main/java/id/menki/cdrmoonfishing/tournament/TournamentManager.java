@@ -98,11 +98,12 @@ public final class TournamentManager {
 
     public synchronized List<RankedEntry> ranking() {
         List<Entry> copy = new ArrayList<>(entries.values());
-        copy.sort(Comparator
+        Comparator<Entry> comparator = Comparator
                 .comparingDouble((Entry entry) -> score(entry)).reversed()
-                .thenComparingDouble((Entry entry) -> entry.biggestWeight).reversed()
-                .thenComparingInt((Entry entry) -> entry.catches).reversed()
-                .thenComparing(entry -> entry.name, String.CASE_INSENSITIVE_ORDER));
+                .thenComparing(Comparator.comparingDouble((Entry entry) -> entry.biggestWeight).reversed())
+                .thenComparing(Comparator.comparingInt((Entry entry) -> entry.catches).reversed())
+                .thenComparing(entry -> entry.name, String.CASE_INSENSITIVE_ORDER);
+        copy.sort(comparator);
 
         List<RankedEntry> result = new ArrayList<>();
         for (int i = 0; i < copy.size(); i++) {
