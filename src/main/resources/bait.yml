@@ -1,20 +1,20 @@
 bait:
   worm:
-    display-name: "Worm"
+    display-name: "Cacing"
     material: STRING
     rarity-multipliers:
       COMMON: 1.50
       UNCOMMON: 1.25
 
   shrimp:
-    display-name: "Shrimp Bait"
+    display-name: "Umpan Udang"
     material: SALMON
     rarity-multipliers:
       UNCOMMON: 1.40
       RARE: 1.35
 
   glow_worm:
-    display-name: "Glow Worm"
+    display-name: "Cacing Bercahaya"
     material: GLOW_BERRIES
     rarity-multipliers:
       RARE: 1.75
@@ -23,7 +23,7 @@ bait:
       abyss_eel: 1.60
 
   moon_worm:
-    display-name: "Moon Worm"
+    display-name: "Cacing Bulan"
     material: ENDER_EYE
     rarity-multipliers:
       RARE: 2.25
@@ -32,7 +32,7 @@ bait:
       moon_koi: 2.50
 
   ancient_bait:
-    display-name: "Ancient Bait"
+    display-name: "Umpan Kuno"
     material: NAUTILUS_SHELL
     rarity-multipliers:
       EPIC: 1.50
