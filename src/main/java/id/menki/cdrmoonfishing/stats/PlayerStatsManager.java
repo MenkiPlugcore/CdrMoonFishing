@@ -12,14 +12,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class PlayerStatsManager {
     private final JavaPlugin plugin;
     private final File playerDirectory;
     private final Map<UUID, YamlConfiguration> cache = new HashMap<>();
     private final Map<UUID, File> files = new HashMap<>();
+    private final List<CatchObserver> catchObservers = new CopyOnWriteArrayList<>();
 
     public PlayerStatsManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -75,6 +78,15 @@ public final class PlayerStatsManager {
         }
 
         save(uuid, yaml);
+
+        for (CatchObserver observer : catchObservers) {
+            try {
+                observer.onCatch(player, fish, weight);
+            } catch (RuntimeException ex) {
+                plugin.getLogger().warning("Catch observer failed for " + player.getName() + ": " + ex.getMessage());
+            }
+        }
+
         return new CatchRecordResult(
                 newDiscovery,
                 newSpeciesRecord,
@@ -82,6 +94,10 @@ public final class PlayerStatsManager {
                 countDiscovered(yaml),
                 yaml.getInt("stats.total-catches", 0)
         );
+    }
+
+    public void registerCatchObserver(CatchObserver observer) {
+        if (observer != null) catchObservers.add(observer);
     }
 
     public StatsSnapshot snapshot(Player player) {
@@ -136,6 +152,7 @@ public final class PlayerStatsManager {
         for (Map.Entry<UUID, YamlConfiguration> entry : cache.entrySet()) {
             save(entry.getKey(), entry.getValue());
         }
+        catchObservers.clear();
         cache.clear();
         files.clear();
     }
@@ -169,6 +186,11 @@ public final class PlayerStatsManager {
             }
         }
         return discovered;
+    }
+
+    @FunctionalInterface
+    public interface CatchObserver {
+        void onCatch(Player player, FishDefinition fish, double weight);
     }
 
     public record CatchRecordResult(
