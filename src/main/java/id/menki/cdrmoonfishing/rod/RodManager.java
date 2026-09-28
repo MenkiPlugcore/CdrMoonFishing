@@ -117,7 +117,7 @@ public final class RodManager {
         if (amount <= 0) return false;
         ItemStack rod = player.getInventory().getItemInMainHand();
         if (!isProgressionRod(rod)) {
-            player.sendMessage(Component.text("Rod XP reward skipped: hold a CdrMoonFishing progression rod.", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Hadiah XP joran tertunda: pegang joran progres CdrMoonFishing.", NamedTextColor.YELLOW));
             return false;
         }
 
@@ -128,16 +128,14 @@ public final class RodManager {
         ItemMeta meta = rod.getItemMeta();
         meta.getPersistentDataContainer().set(rodXpKey, PersistentDataType.INTEGER, newXp);
         RodTierDefinition after = registry.tierForXp(newXp);
-        if (after != null) {
-            meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, after.id());
-        }
+        if (after != null) meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, after.id());
         rod.setItemMeta(meta);
         refreshMeta(rod);
 
-        player.sendActionBar(Component.text("Rod XP +" + amount + " • " + newXp + " XP", NamedTextColor.AQUA));
+        player.sendActionBar(Component.text("XP Joran +" + amount + " • " + newXp + " XP", NamedTextColor.AQUA));
         if (after != null && !after.id().equals(before.id())) {
-            player.sendTitle("§b§lROD UPGRADED!", "§f" + after.displayName(), 5, 40, 10);
-            player.sendMessage(Component.text("Fishing Rod upgraded to ", NamedTextColor.GRAY)
+            player.sendTitle("§b§lJORAN NAIK TINGKAT!", "§f" + after.displayName(), 5, 40, 10);
+            player.sendMessage(Component.text("Joran pancing naik menjadi ", NamedTextColor.GRAY)
                     .append(Component.text(after.displayName(), NamedTextColor.AQUA).decorate(TextDecoration.BOLD)));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.35f);
         }
@@ -155,17 +153,17 @@ public final class RodManager {
         meta.displayName(Component.text(tier.displayName(), NamedTextColor.AQUA).decorate(TextDecoration.BOLD));
 
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("CdrMoonFishing Progression Rod", NamedTextColor.DARK_AQUA));
+        lore.add(Component.text("Joran Progres CdrMoonFishing", NamedTextColor.DARK_AQUA));
         lore.add(Component.empty());
-        lore.add(Component.text("Tier: ", NamedTextColor.GRAY)
+        lore.add(Component.text("Tingkat: ", NamedTextColor.GRAY)
                 .append(Component.text(tier.displayName(), NamedTextColor.AQUA)));
-        lore.add(Component.text(String.format(Locale.US, "Reel Power: %.2fx", tier.reelMultiplier()), NamedTextColor.GRAY));
-        lore.add(Component.text(String.format(Locale.US, "Rod Rarity Luck: +%.0f%%", tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
-        lore.add(Component.text(String.format(Locale.US, "Rod XP Gain: %.2fx", tier.xpMultiplier()), NamedTextColor.GRAY));
+        lore.add(Component.text(String.format(Locale.US, "Kekuatan Tarik: %.2fx", tier.reelMultiplier()), NamedTextColor.GRAY));
+        lore.add(Component.text(String.format(Locale.US, "Luck Kelangkaan: +%.0f%%", tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
+        lore.add(Component.text(String.format(Locale.US, "Perolehan XP Joran: %.2fx", tier.xpMultiplier()), NamedTextColor.GRAY));
         lore.add(Component.empty());
 
         if (next == null) {
-            lore.add(Component.text("XP: " + currentXp + " • MAX TIER", NamedTextColor.GOLD));
+            lore.add(Component.text("XP: " + currentXp + " • TINGKAT MAKS", NamedTextColor.GOLD));
             lore.add(Component.text("[" + "▰".repeat(BAR_LENGTH) + "]", NamedTextColor.GOLD));
         } else {
             int tierStart = tier.minXp();
@@ -176,7 +174,7 @@ public final class RodManager {
             String bar = "▰".repeat(filled) + "▱".repeat(BAR_LENGTH - filled);
             lore.add(Component.text("XP: " + currentXp + " / " + target, NamedTextColor.GRAY));
             lore.add(Component.text("[" + bar + "]", NamedTextColor.GREEN));
-            lore.add(Component.text("Next: " + next.displayName(), NamedTextColor.DARK_GRAY));
+            lore.add(Component.text("Berikutnya: " + next.displayName(), NamedTextColor.DARK_GRAY));
         }
 
         meta.lore(lore);
