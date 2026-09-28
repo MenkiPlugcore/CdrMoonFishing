@@ -8,6 +8,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -47,9 +48,14 @@ public final class FishingListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
-        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
-        if (baitManager.trySelect(event.getPlayer(), event.getPlayer().getInventory().getItemInMainHand())) {
+        Action action = event.getAction();
+        boolean rightClick = action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK;
+        boolean leftClick = action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK;
+        if (!rightClick && !leftClick) return;
+
+        // Bait selection stays on use/right-click so attack/left-click can always be used as reel input.
+        if (rightClick && baitManager.trySelect(event.getPlayer(), event.getPlayer().getInventory().getItemInMainHand())) {
             event.setCancelled(true);
             return;
         }
@@ -57,7 +63,22 @@ public final class FishingListener implements Listener {
         if (!fishingManager.isActive(event.getPlayer())) return;
         if (event.getPlayer().getInventory().getItemInMainHand().getType() != Material.FISHING_ROD) return;
 
+        // During the custom minigame both Java use/right-click and Bedrock-friendly attack/left-click
+        // become the same reel pulse. Cancelling prevents vanilla rod/block interactions from interfering.
         event.setCancelled(true);
+        fishingManager.reelPulse(event.getPlayer());
+    }
+
+    /**
+     * Geyser/mobile clients can sometimes surface the attack button primarily as an arm swing.
+     * This fallback makes that swing a reel pulse too. FishingManager already has a reel cooldown,
+     * so if a client fires both PlayerInteractEvent and PlayerAnimationEvent for one tap, it cannot
+     * double-count the input.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onArmSwing(PlayerAnimationEvent event) {
+        if (!fishingManager.isActive(event.getPlayer())) return;
+        if (event.getPlayer().getInventory().getItemInMainHand().getType() != Material.FISHING_ROD) return;
         fishingManager.reelPulse(event.getPlayer());
     }
 
