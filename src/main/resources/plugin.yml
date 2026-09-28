@@ -35,6 +35,10 @@ commands:
     description: View and manage CdrMoonFishing progression rods
     usage: /fishrod [info|tiers|give]
     aliases: [frod, fishingrod]
+  fishcontracts:
+    description: View daily fishing contracts
+    usage: /fishcontracts [reload|reset]
+    aliases: [fcontracts, fishingcontracts, fq]
 permissions:
   cdrmoonfishing.admin:
     description: Access to CdrMoonFishing administration commands
