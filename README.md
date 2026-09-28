@@ -4,7 +4,34 @@ Crossplay-first custom fishing progression for Paper servers. Core gameplay stay
 
 ## Current version
 
-`v1.0.0` — Production Release
+`v1.0.1` — Fishing Hub GUI
+
+## v1.0.1 Fishing Hub GUI
+
+The main player entry point is now:
+
+```text
+/cdrfish
+/fish
+```
+
+`/cdrfish` is the primary command. `/fish` is an alias and may be unavailable if another installed plugin owns that alias.
+
+The 27-slot chest hub is intentionally compact and exposes only the core player flow:
+
+```text
+FishDex
+Fishing Rod
+Daily Contracts
+Fishing Status
+Fish Market
+Tournament
+Stats & Rankings
+```
+
+The center status card summarizes FishDex completion, selected bait and the current Featured Catch. Feature cards show live data such as rod tier/XP, completed contracts, tournament timer, collection progress and fishing statistics.
+
+FishDex, Tournament and Leaderboard GUIs now include a `Fishing Hub` back button for quick navigation.
 
 ## Core gameplay
 
@@ -24,7 +51,7 @@ Crossplay-first custom fishing progression for Paper servers. Core gameplay stay
 
 ### FishDex GUI
 
-`/fishdex [page]` now opens a crossplay-safe chest GUI.
+`/fishdex [page]` opens a crossplay-safe chest GUI.
 
 - 45 species per page
 - undiscovered species stay hidden as `???`
@@ -71,7 +98,7 @@ security:
 
 ### Safer upgrades
 
-`config.yml` now has `config-version`. Missing default keys are copied into existing configs automatically during startup and `/fishing reload`, so normal upgrades do not require deleting configuration files.
+`config.yml` has `config-version`. Missing default keys are copied into existing configs automatically during startup and `/fishing reload`, so normal upgrades do not require deleting configuration files.
 
 ### Production diagnostics
 
@@ -81,17 +108,7 @@ security:
 
 Aliases: `/fdoctor`, `/fishingdoctor`.
 
-The doctor reports:
-
-- plugin/server/Java versions
-- registry counts
-- active/prepared encounters
-- cached statistics profiles
-- tournament state and pending payouts
-- Vault/integration status
-- market redemption ledger count
-- legacy-sale security mode
-- data-folder writability
+The doctor reports plugin/server/Java versions, registry counts, encounter state, statistics cache, tournament state, Vault/integration status, anti-dupe ledger state and data-folder writability.
 
 ### Stability fixes
 
@@ -193,12 +210,14 @@ gradle clean build
 Output:
 
 ```text
-build/libs/CdrMoonFishing-1.0.0.jar
+build/libs/CdrMoonFishing-1.0.1.jar
 ```
 
 ## Commands
 
 ```text
+/cdrfish
+/fish
 /fishdex [page]
 /fishmilestones [status|reload|reset]
 /fishcontracts [reload|reset]
