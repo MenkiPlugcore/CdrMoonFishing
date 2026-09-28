@@ -31,6 +31,10 @@ commands:
     description: View lifetime fishing leaderboards
     usage: /fishleaderboard [catches|weight|biggest|legendary] [page]
     aliases: [flb, fishlb]
+  fishrod:
+    description: View and manage CdrMoonFishing progression rods
+    usage: /fishrod [info|tiers|give]
+    aliases: [frod, fishingrod]
 permissions:
   cdrmoonfishing.admin:
     description: Access to CdrMoonFishing administration commands
