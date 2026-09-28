@@ -3,9 +3,9 @@ package id.menki.cdrmoonfishing.tournament;
 import java.util.Locale;
 
 public enum TournamentMode {
-    POINTS("Points"),
-    TOTAL_WEIGHT("Total Weight"),
-    BIGGEST("Biggest Catch");
+    POINTS("Poin"),
+    TOTAL_WEIGHT("Total Berat"),
+    BIGGEST("Tangkapan Terbesar");
 
     private final String displayName;
 
