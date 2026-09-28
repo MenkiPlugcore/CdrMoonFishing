@@ -27,7 +27,7 @@ public final class FishMarketCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("This command is player-only.");
+            sender.sendMessage("Perintah ini hanya untuk player.");
             return true;
         }
 
@@ -40,43 +40,22 @@ public final class FishMarketCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "featured" -> market.sendFeatured(player);
             case "price" -> market.sendHeldQuote(player);
-            case "open" -> {
-                if (!admin(player)) return true;
-                market.open(player);
-            }
-            case "sellhand" -> {
-                if (!admin(player)) return true;
-                market.sellHeld(player);
-            }
-            case "sellall" -> {
-                if (!admin(player)) return true;
-                market.sellAll(player);
-            }
-            case "setspawn" -> {
-                if (!admin(player)) return true;
-                access.setWarp(player);
-            }
-            case "delspawn", "clearspawn" -> {
-                if (!admin(player)) return true;
-                access.clearWarp(player);
-            }
-            case "bind" -> {
-                if (!admin(player)) return true;
-                access.beginBind(player);
-            }
-            case "unbind" -> {
-                if (!admin(player)) return true;
-                access.beginUnbind(player);
-            }
+            case "open" -> { if (admin(player)) market.open(player); }
+            case "sellhand" -> { if (admin(player)) market.sellHeld(player); }
+            case "sellall" -> { if (admin(player)) market.sellAll(player); }
+            case "setspawn" -> { if (admin(player)) access.setWarp(player); }
+            case "delspawn", "clearspawn" -> { if (admin(player)) access.clearWarp(player); }
+            case "bind" -> { if (admin(player)) access.beginBind(player); }
+            case "unbind" -> { if (admin(player)) access.beginUnbind(player); }
             case "bindings" -> {
                 if (!admin(player)) return true;
-                player.sendMessage(Component.text("━━━━━━━━ FISH MARKET ACCESS ━━━━━━━━", NamedTextColor.AQUA));
-                player.sendMessage(Component.text("Warp: " + (access.hasWarp() ? "SET" : "NOT SET"),
+                player.sendMessage(Component.text("━━━━━━━━ AKSES PASAR IKAN ━━━━━━━━", NamedTextColor.AQUA));
+                player.sendMessage(Component.text("Warp: " + (access.hasWarp() ? "SUDAH DIATUR" : "BELUM DIATUR"),
                         access.hasWarp() ? NamedTextColor.GREEN : NamedTextColor.RED));
-                player.sendMessage(Component.text("Citizens: " + (access.citizensAvailable() ? "READY" : "OFFLINE"),
+                player.sendMessage(Component.text("Citizens: " + (access.citizensAvailable() ? "SIAP" : "OFFLINE"),
                         access.citizensAvailable() ? NamedTextColor.GREEN : NamedTextColor.RED));
-                player.sendMessage(Component.text("Bound NPC IDs: " + (access.boundNpcIds().isEmpty()
-                        ? "none" : access.boundNpcIds().toString()), NamedTextColor.GRAY));
+                player.sendMessage(Component.text("ID NPC terikat: " + (access.boundNpcIds().isEmpty()
+                        ? "tidak ada" : access.boundNpcIds().toString()), NamedTextColor.GRAY));
             }
             default -> player.sendMessage(Component.text("/" + label + " [warp|price|featured]", NamedTextColor.GRAY));
         }
@@ -85,7 +64,7 @@ public final class FishMarketCommand implements CommandExecutor, TabCompleter {
 
     private boolean admin(Player player) {
         if (player.hasPermission("cdrmoonfishing.admin")) return true;
-        player.sendMessage(Component.text("Visit the Fish Merchant to sell your catches.", NamedTextColor.RED));
+        player.sendMessage(Component.text("Kunjungi Pedagang Ikan untuk menjual tangkapanmu.", NamedTextColor.RED));
         return false;
     }
 
