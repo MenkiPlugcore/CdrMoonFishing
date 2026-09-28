@@ -1,6 +1,6 @@
-# CdrMoonFishing v1.0.5
-# Missing keys are merged automatically on startup/reload.
-config-version: 1
+# CdrMoonFishing v1.0.6
+# Key yang belum ada akan digabung otomatis saat startup/reload.
+config-version: 2
 
 minigame:
   tick-period: 5
@@ -17,8 +17,8 @@ minigame:
   progress-loss-outside: 1.5
   timeout-seconds: 25
 
-# Lane-style encounter HUD. This is not a loading bar: the marker moves across
-# a fixed lane while safe / warning / danger zones stay visible.
+# HUD lane satu baris. Marker bergerak di jalur tetap sementara zona
+# aman / peringatan / bahaya selalu terlihat.
 ui:
   action-bar:
     enabled: true
@@ -60,11 +60,11 @@ economy:
     featured-multiplier: 1.35
     timezone: "Asia/Jakarta"
 
-# Catch IDs are added to new v1.0 catches. The redemption ledger blocks
-# copied/duplicated catches from being sold more than once.
+# Catch ID diberikan pada tangkapan baru. Ledger penjualan mencegah
+# hasil duplikasi dengan ID yang sama dijual lebih dari sekali.
 security:
   market:
-    # false keeps pre-v1.0 fish sellable. Set true after legacy stock is gone.
+    # false = ikan lama sebelum v1.0 masih dapat dijual.
     require-catch-uid: false
 
 tournament:
@@ -83,9 +83,9 @@ tournament:
     third: 1000.0
 
 messages:
-  bite-common: "Something is biting..."
-  bite-unusual: "Something unusual is biting..."
-  bite-legendary: "Something HUGE took the bait..."
-  encounter-start: "FISH ON! Keep the line under control."
-  escaped: "The fish escaped."
-  market-duplicate-blocked: "This catch identity has already been redeemed."
+  bite-common: "Ada ikan yang menyambar..."
+  bite-unusual: "Ada sesuatu yang tidak biasa menyambar..."
+  bite-legendary: "SESUATU YANG BESAR memakan umpannya..."
+  encounter-start: "IKAN TERSANGKUT! Jaga tarikan senar."
+  escaped: "Ikannya lepas."
+  market-duplicate-blocked: "Identitas tangkapan ini sudah pernah dijual."
