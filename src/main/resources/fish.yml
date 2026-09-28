@@ -1,7 +1,7 @@
-# CdrMoonFishing fish registry
+# Registry ikan CdrMoonFishing
 #
-# Custom item providers are optional. `material` always remains the safe vanilla fallback.
-# Add this block to any fish when its asset is ready:
+# Provider item custom bersifat opsional. `material` selalu menjadi fallback vanilla yang aman.
+# Tambahkan blok ini pada ikan ketika asetnya sudah siap:
 #
 # item:
 #   provider: AUTO              # VANILLA | ITEMSADDER | MMOITEMS | AUTO
@@ -11,11 +11,11 @@
 #   preserve-provider-name: true
 #   preserve-provider-lore: true
 #
-# AUTO tries ItemsAdder first, then MMOItems, then falls back to `material`.
+# AUTO mencoba ItemsAdder, lalu MMOItems, lalu kembali ke `material`.
 
 fish:
   river_carp:
-    display-name: "River Carp"
+    display-name: "Ikan Mas Sungai"
     material: COD
     rarity: COMMON
     behavior: CALM
@@ -33,7 +33,7 @@ fish:
     required-baits: []
 
   silver_salmon:
-    display-name: "Silver Salmon"
+    display-name: "Salmon Perak"
     material: SALMON
     rarity: UNCOMMON
     behavior: ERRATIC
@@ -51,7 +51,7 @@ fish:
     required-baits: []
 
   moon_koi:
-    display-name: "Moon Koi"
+    display-name: "Koi Bulan"
     material: TROPICAL_FISH
     rarity: RARE
     behavior: ERRATIC
@@ -69,7 +69,7 @@ fish:
     required-baits: []
     phases:
       moon_dance:
-        display-name: "Moon Dance"
+        display-name: "Tarian Bulan"
         start-progress: 0
         behavior: ERRATIC
         pull-multiplier: 1.0
@@ -77,11 +77,11 @@ fish:
         safe-max-offset: 0
         reel-power-multiplier: 1.0
         progress-multiplier: 1.0
-        title: "§d§lMOON KOI"
-        subtitle: "§7Follow its strange rhythm..."
+        title: "§d§lKOI BULAN"
+        subtitle: "§7Ikuti ritmenya yang aneh..."
         sound: BLOCK_NOTE_BLOCK_CHIME
       final_dance:
-        display-name: "Final Dance"
+        display-name: "Tarian Terakhir"
         start-progress: 65
         behavior: AGGRESSIVE
         pull-multiplier: 1.18
@@ -89,12 +89,12 @@ fish:
         safe-max-offset: -8
         reel-power-multiplier: 0.92
         progress-multiplier: 0.85
-        title: "§d§lFINAL DANCE"
-        subtitle: "§fThe Moon Koi fights back!"
+        title: "§d§lTARIAN TERAKHIR"
+        subtitle: "§fKoi Bulan mulai melawan!"
         sound: ENTITY_FISHING_BOBBER_SPLASH
 
   abyss_eel:
-    display-name: "Abyss Eel"
+    display-name: "Belut Jurang"
     material: PUFFERFISH
     rarity: EPIC
     behavior: DIVING
@@ -112,7 +112,7 @@ fish:
     required-baits: []
     phases:
       deep_stalk:
-        display-name: "Deep Stalk"
+        display-name: "Mengintai di Kedalaman"
         start-progress: 0
         behavior: DIVING
         pull-multiplier: 1.0
@@ -120,11 +120,11 @@ fish:
         safe-max-offset: 0
         reel-power-multiplier: 1.0
         progress-multiplier: 1.0
-        title: "§5§lABYSS EEL"
-        subtitle: "§7Something circles beneath you..."
+        title: "§5§lBELUT JURANG"
+        subtitle: "§7Sesuatu berputar di bawahmu..."
         sound: BLOCK_NOTE_BLOCK_BASS
       abyssal_dive:
-        display-name: "Abyssal Dive"
+        display-name: "Terjun ke Jurang"
         start-progress: 45
         behavior: DIVING
         pull-multiplier: 1.20
@@ -132,11 +132,11 @@ fish:
         safe-max-offset: -5
         reel-power-multiplier: 0.94
         progress-multiplier: 0.90
-        title: "§5§lABYSSAL DIVE"
-        subtitle: "§dIt dives into the darkness!"
+        title: "§5§lTERJUN KE JURANG"
+        subtitle: "§dIa menyelam ke dalam kegelapan!"
         sound: ENTITY_FISHING_BOBBER_SPLASH
       desperate_rush:
-        display-name: "Desperate Rush"
+        display-name: "Serbuan Terakhir"
         start-progress: 78
         behavior: AGGRESSIVE
         pull-multiplier: 1.35
@@ -144,12 +144,12 @@ fish:
         safe-max-offset: -10
         reel-power-multiplier: 0.88
         progress-multiplier: 0.80
-        title: "§c§lDESPERATE RUSH"
-        subtitle: "§7Don't let the line snap!"
+        title: "§c§lSERBUAN TERAKHIR"
+        subtitle: "§7Jangan sampai senarnya putus!"
         sound: ENTITY_ENDER_DRAGON_GROWL
 
   lunar_leviathan:
-    display-name: "Lunar Leviathan"
+    display-name: "Leviathan Lunar"
     material: TROPICAL_FISH
     rarity: LEGENDARY
     behavior: AGGRESSIVE
@@ -167,7 +167,7 @@ fish:
     required-baits: ["ancient_bait"]
     phases:
       awakening:
-        display-name: "Phase I - Awakening"
+        display-name: "Fase I - Kebangkitan"
         start-progress: 0
         behavior: AGGRESSIVE
         pull-multiplier: 1.05
@@ -175,11 +175,11 @@ fish:
         safe-max-offset: -3
         reel-power-multiplier: 1.0
         progress-multiplier: 1.0
-        title: "§6§lLUNAR LEVIATHAN"
-        subtitle: "§ePHASE I §7- The ancient beast awakens"
+        title: "§6§lLEVIATHAN LUNAR"
+        subtitle: "§eFASE I §7- Makhluk purba itu terbangun"
         sound: ENTITY_ENDER_DRAGON_GROWL
       abyssal_dive:
-        display-name: "Phase II - Abyssal Dive"
+        display-name: "Fase II - Terjun Abyssal"
         start-progress: 35
         behavior: DIVING
         pull-multiplier: 1.30
@@ -187,11 +187,11 @@ fish:
         safe-max-offset: -8
         reel-power-multiplier: 0.90
         progress-multiplier: 0.85
-        title: "§5§lABYSSAL DIVE"
-        subtitle: "§dPHASE II §7- It drags the line into the abyss!"
+        title: "§5§lTERJUN ABYSSAL"
+        subtitle: "§dFASE II §7- Ia menyeret senar ke kedalaman!"
         sound: ENTITY_FISHING_BOBBER_SPLASH
       final_struggle:
-        display-name: "Phase III - Final Struggle"
+        display-name: "Fase III - Perlawanan Terakhir"
         start-progress: 72
         behavior: AGGRESSIVE
         pull-multiplier: 1.60
@@ -199,6 +199,6 @@ fish:
         safe-max-offset: -15
         reel-power-multiplier: 0.78
         progress-multiplier: 0.70
-        title: "§4§lFINAL STRUGGLE"
-        subtitle: "§cPHASE III §7- Survive the last assault!"
+        title: "§4§lPERLAWANAN TERAKHIR"
+        subtitle: "§cFASE III §7- Bertahan dari serangan terakhir!"
         sound: ENTITY_ENDER_DRAGON_GROWL
