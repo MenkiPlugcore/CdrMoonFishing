@@ -3,7 +3,7 @@ version: ${version}
 main: id.menki.cdrmoonfishing.CdrMoonFishing
 api-version: '1.21'
 author: Cadera
-description: Crossplay-first custom fishing gameplay for Java and Bedrock players.
+description: Crossplay-first custom fishing progression for Java and Bedrock players.
 softdepend:
   - Vault
   - ItemsAdder
@@ -16,7 +16,7 @@ commands:
     usage: /fishing [bait|stats|givebait|reload|debug|status|cancel]
     aliases: [moonfishing, cmf]
   fishdex:
-    description: Open your CdrMoonFishing FishDex
+    description: Open the FishDex GUI
     usage: /fishdex [page]
     aliases: [fdex]
   fishmarket:
@@ -24,11 +24,11 @@ commands:
     usage: /fishmarket [open|price|sellhand|sellall|featured]
     aliases: [fmarket, fishshop]
   fishtournament:
-    description: View and manage fishing tournaments
+    description: Open or manage fishing tournaments
     usage: /fishtournament [status|top|start|stop|cancel]
     aliases: [ftourney, ftournament]
   fishleaderboard:
-    description: View lifetime fishing leaderboards
+    description: Open lifetime fishing leaderboards
     usage: /fishleaderboard [catches|weight|biggest|legendary] [page]
     aliases: [flb, fishlb]
   fishrod:
@@ -43,6 +43,10 @@ commands:
     description: View FishDex collection milestones and rewards
     usage: /fishmilestones [status|reload|reset]
     aliases: [fmilestones, fishdexrewards, fdrewards]
+  fishdoctor:
+    description: Run CdrMoonFishing production diagnostics
+    usage: /fishdoctor
+    aliases: [fdoctor, fishingdoctor]
 permissions:
   cdrmoonfishing.admin:
     description: Access to CdrMoonFishing administration commands
