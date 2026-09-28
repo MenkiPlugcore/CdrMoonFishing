@@ -1,5 +1,5 @@
-# CdrMoonFishing v0.9.0 Daily Fishing Contracts
-# Three contracts are selected deterministically each day.
+# CdrMoonFishing v1.0.6 Kontrak Memancing Harian
+# Tiga kontrak dipilih secara deterministik setiap hari.
 
 settings:
   daily-count: 3
@@ -7,8 +7,8 @@ settings:
 
 contracts:
   rare_hunter:
-    display-name: "Rare Hunter"
-    description: "Catch 5 RARE-or-better fish."
+    display-name: "Pemburu Ikan Langka"
+    description: "Tangkap 5 ikan LANGKA atau lebih tinggi."
     progress-mode: COUNT
     target: 5
     conditions:
@@ -18,8 +18,8 @@ contracts:
       rod-xp: 30
 
   heavy_haul:
-    display-name: "Heavy Haul"
-    description: "Catch a total of 30 kg of fish."
+    display-name: "Tangkapan Berat"
+    description: "Tangkap ikan dengan total berat 30 kg."
     progress-mode: WEIGHT
     target: 30.0
     conditions: {}
@@ -28,8 +28,8 @@ contracts:
       rod-xp: 25
 
   moon_koi_night:
-    display-name: "Moonlit Koi"
-    description: "Catch 1 Moon Koi at night."
+    display-name: "Koi di Bawah Bulan"
+    description: "Tangkap 1 Koi Bulan pada malam hari."
     progress-mode: COUNT
     target: 1
     conditions:
@@ -43,8 +43,8 @@ contracts:
       rod-xp: 40
 
   shrimp_specialist:
-    display-name: "Shrimp Specialist"
-    description: "Catch 3 fish using Shrimp bait."
+    display-name: "Spesialis Umpan Udang"
+    description: "Tangkap 3 ikan menggunakan Umpan Udang."
     progress-mode: COUNT
     target: 3
     conditions:
@@ -57,8 +57,8 @@ contracts:
       rod-xp: 20
 
   deep_water_hunt:
-    display-name: "Deep Water Hunt"
-    description: "Catch 3 fish from depth 20 or deeper."
+    display-name: "Perburuan Laut Dalam"
+    description: "Tangkap 3 ikan dari kedalaman 20 blok atau lebih."
     progress-mode: COUNT
     target: 3
     conditions:
@@ -68,8 +68,8 @@ contracts:
       rod-xp: 35
 
   storm_fisher:
-    display-name: "Storm Fisher"
-    description: "Catch 2 fish during a thunderstorm."
+    display-name: "Pemancing Badai"
+    description: "Tangkap 2 ikan saat badai petir."
     progress-mode: COUNT
     target: 2
     conditions:
