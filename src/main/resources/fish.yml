@@ -1,3 +1,18 @@
+# CdrMoonFishing fish registry
+#
+# Custom item providers are optional. `material` always remains the safe vanilla fallback.
+# Add this block to any fish when its asset is ready:
+#
+# item:
+#   provider: AUTO              # VANILLA | ITEMSADDER | MMOITEMS | AUTO
+#   itemsadder-id: "moonfishing:moon_koi"
+#   mmoitems-type: "MATERIAL"
+#   mmoitems-id: "MOON_KOI"
+#   preserve-provider-name: true
+#   preserve-provider-lore: true
+#
+# AUTO tries ItemsAdder first, then MMOItems, then falls back to `material`.
+
 fish:
   river_carp:
     display-name: "River Carp"
