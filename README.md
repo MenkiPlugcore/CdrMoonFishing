@@ -4,7 +4,7 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 
 ## Current version
 
-`v0.7.0` — Custom Item Providers
+`v0.8.0` — Fishing Rod Progression / Rod Tier
 
 ## Implemented
 
@@ -15,123 +15,89 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 - Persistent FishDex and lifetime player statistics
 - Vault-backed Fish Market with per-species price/kg
 - Daily Featured Catch market bonus
-- Live fishing tournaments
-- Three tournament modes: POINTS, TOTAL_WEIGHT and BIGGEST
-- Automatic tournament participation from successful catches
-- Persistent tournament state across restarts
-- Tournament history archive
-- Vault rewards for top 3 with pending reward retry
-- Lifetime global fishing leaderboards
-- Runtime ItemsAdder custom item provider
-- Runtime MMOItems custom item provider
-- AUTO provider mode with vanilla fallback
-- Provider name/lore preservation controls
-- CdrMoonFishing PDC metadata retained on provider-backed fish
+- Live fishing tournaments + lifetime leaderboards
+- Runtime ItemsAdder/MMOItems custom fish item providers with vanilla fallback
+- Persistent progression fishing rods with PDC identity, XP and auto tier upgrades
+- Per-tier reel-power bonus
+- Per-tier rarity-luck multiplier
+- Per-tier rod-XP gain multiplier
+
+## Fishing Rod Progression
+
+Only CdrMoonFishing progression rods earn rod XP. Normal vanilla fishing rods still work, but use neutral `1.00x` fishing bonuses and never level up.
+
+Admin distribution:
+
+```text
+/fishrod give <player>
+/fishrod give <player> <tier>
+```
+
+Player inspection:
+
+```text
+/fishrod
+/fishrod info
+/fishrod tiers
+```
+
+Aliases: `/frod`, `/fishingrod`.
+
+Default tiers:
+
+```text
+Driftwood   0 XP     • reel 1.00x • luck +0%  • XP 1.00x
+Reinforced  250 XP   • reel 1.06x • luck +5%  • XP 1.05x
+Oceanic     750 XP   • reel 1.12x • luck +12% • XP 1.10x
+Abyssal     1750 XP  • reel 1.20x • luck +22% • XP 1.18x
+Lunar       4000 XP  • reel 1.30x • luck +35% • XP 1.30x
+```
+
+Tier configuration lives in `rod.yml`. XP is awarded only after a successful custom fishing encounter. The default XP formula is rarity base XP plus a weight contribution, multiplied by the current rod tier's XP multiplier.
+
+Default base XP:
+
+```text
+COMMON      5
+UNCOMMON    8
+RARE       16
+EPIC       35
+LEGENDARY 100
+```
+
+Default weight contribution is `0.5 XP per kg` before the tier multiplier.
+
+Rarity luck changes weighted encounter selection rather than guaranteeing a rarity. COMMON stays at its normal weight; higher rarities receive progressively stronger multipliers, with LEGENDARY receiving the largest benefit from a high-tier rod.
+
+Rod metadata is stored directly on the fishing rod using PDC (`rod_id`, `rod_xp`, `rod_tier`). Rod lore automatically refreshes after catches and shows tier, XP progress, reel multiplier and rarity luck.
 
 ## Custom fish item providers
 
-Custom visuals are optional. Every fish keeps its existing `material` as a vanilla fallback, so gameplay never depends on ItemsAdder or MMOItems being online.
-
-Add an `item:` section to any fish in `fish.yml`:
-
-```yaml
-moon_koi:
-  display-name: "Moon Koi"
-  material: TROPICAL_FISH
-
-  item:
-    provider: AUTO
-    itemsadder-id: "moonfishing:moon_koi"
-    mmoitems-type: "MATERIAL"
-    mmoitems-id: "MOON_KOI"
-    preserve-provider-name: true
-    preserve-provider-lore: true
-```
+Custom visuals remain optional. Every fish keeps its configured Bukkit `material` as a vanilla fallback.
 
 Supported provider modes:
 
 ```text
-VANILLA     Always use the configured Bukkit material.
-ITEMSADDER  Use ItemsAdder; fall back to vanilla if unavailable/missing.
-MMOITEMS    Use MMOItems; fall back to vanilla if unavailable/missing.
-AUTO        Try ItemsAdder, then MMOItems, then vanilla.
+VANILLA
+ITEMSADDER
+MMOITEMS
+AUTO
 ```
 
-ItemsAdder lookup uses the registered namespaced custom item ID. MMOItems uses a type + item ID pair.
-
-The provider item is applied only after a successful fishing encounter. CdrMoonFishing then transfers its catch metadata onto the provider-backed item, including species ID, rarity, weight, region, depth, catch timestamp, behavior and bait.
-
-Because price calculations read CdrMoonFishing PDC rather than the underlying material/model, custom ItemsAdder/MMOItems fish remain compatible with Fish Market selling, FishDex, statistics and tournament scoring.
-
-If an external item ID is missing or its plugin is offline, CdrMoonFishing logs a warning once and keeps the vanilla catch instead.
+Provider-backed catches retain CdrMoonFishing PDC, so Fish Market, FishDex, statistics and tournaments continue to work normally.
 
 ## Tournament
-
-Player commands:
 
 ```text
 /fishtournament
 /fishtournament status
 /fishtournament top [page]
-```
-
-Admin commands:
-
-```text
 /fishtournament start <minutes> [points|weight|biggest]
 /fishtournament stop
 /fishtournament cancel
 ```
 
-Aliases: `/ftourney`, `/ftournament`.
-
-Players do not need to join manually. A successful CdrMoonFishing catch while an event is active automatically creates/updates their tournament entry.
-
-### Tournament modes
-
-`POINTS` combines rarity points with a weight bonus.
-
-Default rarity points:
-
-```text
-COMMON      1
-UNCOMMON    3
-RARE        8
-EPIC       20
-LEGENDARY  60
-```
-
-Default weight contribution is `0.25 points per kg`.
-
-`TOTAL_WEIGHT` ranks by total kilograms caught during the event.
-
-`BIGGEST` ranks by the single heaviest valid catch during the event.
-
-Tie-break order is score, biggest catch, catch count, then player name.
-
-### Tournament rewards
-
-Default Vault rewards:
-
-```text
-#1  5000
-#2  2500
-#3  1000
-```
-
-If Vault or the economy provider is unavailable when the event ends, the reward is stored in `tournament.yml` as a pending payout and retried automatically.
-
-Active state is stored in:
-
-```text
-plugins/CdrMoonFishing/tournament.yml
-```
-
-Completed results are archived in:
-
-```text
-plugins/CdrMoonFishing/tournament-history.yml
-```
+Modes: `POINTS`, `TOTAL_WEIGHT`, `BIGGEST`. Tournament participation is automatic on successful catches. Top-3 Vault rewards support pending payout retry when the economy provider is unavailable.
 
 ## Global leaderboard
 
@@ -140,13 +106,6 @@ plugins/CdrMoonFishing/tournament-history.yml
 ```
 
 Aliases: `/flb`, `/fishlb`.
-
-Metrics:
-
-- `catches` — lifetime successful catches
-- `weight` — lifetime total caught weight
-- `biggest` — personal biggest fish
-- `legendary` — lifetime legendary catches
 
 ## Fish Market
 
@@ -158,17 +117,7 @@ Metrics:
 /fishmarket featured
 ```
 
-Fish value is calculated at sale time:
-
-```text
-base-price-per-kg
-× weight
-× rarity multiplier
-× global multiplier
-× featured multiplier (when active)
-```
-
-Vault is optional for fishing gameplay, but selling and tournament cash rewards require a Vault economy provider.
+Fish value is calculated from species base price, weight, rarity multiplier, global multiplier and optional Featured Catch multiplier.
 
 ## FishDex & statistics
 
@@ -177,11 +126,7 @@ Vault is optional for fishing gameplay, but selling and tournament cash rewards 
 /fishing stats [player]
 ```
 
-Player profiles are stored under:
-
-```text
-plugins/CdrMoonFishing/players/<uuid>.yml
-```
+Player profiles are stored under `plugins/CdrMoonFishing/players/<uuid>.yml`.
 
 ## Bait
 
@@ -214,12 +159,13 @@ gradle clean build
 Output:
 
 ```text
-build/libs/CdrMoonFishing-0.7.0.jar
+build/libs/CdrMoonFishing-0.8.0.jar
 ```
 
 ## Commands
 
 ```text
+/fishrod [info|tiers|give]
 /fishtournament [status|top|start|stop|cancel]
 /fishleaderboard [catches|weight|biggest|legendary] [page]
 /fishmarket [open|price|sellhand|sellall|featured]
@@ -235,5 +181,5 @@ build/libs/CdrMoonFishing-0.7.0.jar
 
 ## Roadmap
 
-- v0.7.x — custom item/provider polish and custom visual asset mapping
-- next — expanded fish catalog, fishing regions/spots and encounter/environment polish
+- v0.8.x — rod balancing, rod visuals and progression polish
+- next — Daily/weekly fishing missions or FishDex collection rewards
