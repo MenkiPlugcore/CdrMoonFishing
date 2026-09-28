@@ -1,5 +1,7 @@
 package id.menki.cdrmoonfishing.registry;
 
+import id.menki.cdrmoonfishing.item.FishItemDefinition;
+import id.menki.cdrmoonfishing.item.FishItemProvider;
 import id.menki.cdrmoonfishing.model.BaitDefinition;
 import id.menki.cdrmoonfishing.model.EncounterPhase;
 import id.menki.cdrmoonfishing.model.FishBehavior;
@@ -45,7 +47,7 @@ public final class FishRegistry {
 
             Material material = Material.matchMaterial(section.getString("material", "COD"));
             if (material == null) {
-                plugin.getLogger().warning("Skipping fish '" + id + "': invalid material.");
+                plugin.getLogger().warning("Skipping fish '" + id + "': invalid fallback material.");
                 continue;
             }
 
@@ -58,12 +60,14 @@ public final class FishRegistry {
             }
 
             FishBehavior behavior = parseBehavior(section.getString("behavior", "CALM"), FishBehavior.CALM, id);
+            FishItemDefinition itemDefinition = parseItemDefinition(section, id);
             List<EncounterPhase> phases = parsePhases(section, behavior, id);
 
             FishDefinition definition = new FishDefinition(
                     id,
                     section.getString("display-name", id),
                     material,
+                    itemDefinition,
                     rarity,
                     behavior,
                     Math.max(0.0, section.getDouble("chance", 1.0)),
@@ -85,7 +89,31 @@ public final class FishRegistry {
         }
 
         long phased = definitions.values().stream().filter(definition -> !definition.phases().isEmpty()).count();
-        plugin.getLogger().info("Loaded " + definitions.size() + " fish definitions (" + phased + " multi-phase).");
+        long customItems = definitions.values().stream()
+                .filter(definition -> definition.itemDefinition() != null
+                        && definition.itemDefinition().provider() != FishItemProvider.VANILLA)
+                .count();
+        plugin.getLogger().info("Loaded " + definitions.size() + " fish definitions (" + phased
+                + " multi-phase, " + customItems + " custom-item configured).");
+    }
+
+    private FishItemDefinition parseItemDefinition(ConfigurationSection fishSection, String fishId) {
+        ConfigurationSection section = fishSection.getConfigurationSection("item");
+        if (section == null) return FishItemDefinition.vanilla();
+
+        String rawProvider = section.getString("provider", "VANILLA");
+        FishItemProvider provider = FishItemProvider.parse(rawProvider);
+        if (!provider.name().equalsIgnoreCase(rawProvider == null ? "VANILLA" : rawProvider.trim())) {
+            plugin.getLogger().warning("Fish '" + fishId + "' has invalid item provider '" + rawProvider + "'; using VANILLA.");
+        }
+
+        String itemsAdderId = blankToNull(section.getString("itemsadder-id"));
+        String mmoItemsType = blankToNull(section.getString("mmoitems-type"));
+        String mmoItemsId = blankToNull(section.getString("mmoitems-id"));
+        boolean preserveName = section.getBoolean("preserve-provider-name", provider != FishItemProvider.VANILLA);
+        boolean preserveLore = section.getBoolean("preserve-provider-lore", provider != FishItemProvider.VANILLA);
+
+        return new FishItemDefinition(provider, itemsAdderId, mmoItemsType, mmoItemsId, preserveName, preserveLore);
     }
 
     private List<EncounterPhase> parsePhases(ConfigurationSection fishSection, FishBehavior defaultBehavior, String fishId) {
@@ -145,10 +173,10 @@ public final class FishRegistry {
         double pullMax = Math.max(definition.pullMin(), definition.pullMax());
 
         return new FishDefinition(
-                definition.id(), definition.displayName(), definition.material(), definition.rarity(), definition.behavior(),
-                definition.chance(), minWeight, maxWeight, minDepth, maxDepth, pullMin, pullMax,
-                definition.basePricePerKg(), definition.biomes(), definition.weather(), definition.time(),
-                definition.requiredBaits(), definition.phases()
+                definition.id(), definition.displayName(), definition.material(), definition.itemDefinition(),
+                definition.rarity(), definition.behavior(), definition.chance(), minWeight, maxWeight,
+                minDepth, maxDepth, pullMin, pullMax, definition.basePricePerKg(), definition.biomes(),
+                definition.weather(), definition.time(), definition.requiredBaits(), definition.phases()
         );
     }
 
@@ -198,6 +226,11 @@ public final class FishRegistry {
 
     public Map<String, FishDefinition> definitions() {
         return Collections.unmodifiableMap(definitions);
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 
     private double defaultBasePrice(FishRarity rarity) {
