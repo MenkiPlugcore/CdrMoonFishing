@@ -159,13 +159,13 @@ public final class FishDexMilestoneManager {
 
     public void sendStatus(Player player) {
         evaluate(player, true);
-        PlayerStatsManager.StatsSnapshot stats = statsManager.snapshot(player);
         int total = fishRegistry.definitions().size();
-        double percent = total <= 0 ? 0.0 : (stats.discoveredSpecies() * 100.0) / total;
+        int discovered = activeDiscovered(player);
+        double percent = total <= 0 ? 0.0 : (discovered * 100.0) / total;
 
         player.sendMessage(Component.text("━━━━━━━━ FISHDEX MILESTONES ━━━━━━━━", NamedTextColor.DARK_AQUA));
         player.sendMessage(Component.text(String.format(Locale.US,
-                "FishDex: %d/%d discovered (%.1f%%)", stats.discoveredSpecies(), total, percent), NamedTextColor.AQUA));
+                "FishDex: %d/%d discovered (%.1f%%)", discovered, total, percent), NamedTextColor.AQUA));
         player.sendMessage(Component.text(String.format(Locale.US,
                 "Permanent Collection Luck: +%.0f%%", collectionLuck(player) * 100.0), NamedTextColor.LIGHT_PURPLE));
 
@@ -217,7 +217,7 @@ public final class FishDexMilestoneManager {
         return switch (milestone.type()) {
             case COLLECTION_PERCENT -> {
                 int total = fishRegistry.definitions().size();
-                double percent = total <= 0 ? 0.0 : (stats.discoveredSpecies() * 100.0) / total;
+                double percent = total <= 0 ? 0.0 : (activeDiscovered(player) * 100.0) / total;
                 yield percent + 0.0001 >= milestone.targetPercent();
             }
             case FIRST_LEGENDARY -> stats.legendaryCatches() > 0;
@@ -235,6 +235,14 @@ public final class FishDexMilestoneManager {
             if (!statsManager.entry(player, fish.id()).discovered()) return false;
         }
         return true;
+    }
+
+    private int activeDiscovered(Player player) {
+        int discovered = 0;
+        for (FishDefinition fish : fishRegistry.definitions().values()) {
+            if (statsManager.entry(player, fish.id()).discovered()) discovered++;
+        }
+        return discovered;
     }
 
     private void grantReward(Player player, YamlConfiguration profile, FishDexMilestone milestone) {
@@ -301,7 +309,7 @@ public final class FishDexMilestoneManager {
         return switch (milestone.type()) {
             case COLLECTION_PERCENT -> {
                 int total = fishRegistry.definitions().size();
-                double percent = total <= 0 ? 0.0 : (stats.discoveredSpecies() * 100.0) / total;
+                double percent = total <= 0 ? 0.0 : (activeDiscovered(player) * 100.0) / total;
                 yield String.format(Locale.US, "%.1f/%.0f%%", Math.min(percent, milestone.targetPercent()), milestone.targetPercent());
             }
             case FIRST_LEGENDARY -> stats.legendaryCatches() > 0 ? "Legendary discovered" : "Catch your first Legendary";
