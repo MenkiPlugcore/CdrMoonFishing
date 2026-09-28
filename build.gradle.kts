@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "id.menki"
-version = "0.8.0"
+version = "0.9.0"
 
 repositories {
     mavenCentral()
