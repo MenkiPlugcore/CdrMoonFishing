@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.ToDoubleFunction;
 
 public final class FishRegistry {
     private final JavaPlugin plugin;
@@ -193,6 +194,17 @@ public final class FishRegistry {
     }
 
     public FishDefinition select(String biomeName, int depth, String weatherName, String timeName, BaitDefinition bait) {
+        return select(biomeName, depth, weatherName, timeName, bait, definition -> 1.0);
+    }
+
+    public FishDefinition select(
+            String biomeName,
+            int depth,
+            String weatherName,
+            String timeName,
+            BaitDefinition bait,
+            ToDoubleFunction<FishDefinition> externalMultiplier
+    ) {
         String baitId = bait == null ? null : bait.id();
         List<FishDefinition> eligible = definitions.values().stream()
                 .filter(definition -> definition.matches(
@@ -202,21 +214,22 @@ public final class FishRegistry {
 
         if (eligible.isEmpty()) return null;
 
-        double total = eligible.stream().mapToDouble(definition -> adjustedWeight(definition, bait)).sum();
+        double total = eligible.stream().mapToDouble(definition -> adjustedWeight(definition, bait, externalMultiplier)).sum();
         if (total <= 0.0) return null;
 
         double roll = ThreadLocalRandom.current().nextDouble(total);
         double cursor = 0.0;
         for (FishDefinition definition : eligible) {
-            cursor += adjustedWeight(definition, bait);
+            cursor += adjustedWeight(definition, bait, externalMultiplier);
             if (roll <= cursor) return definition;
         }
-        return eligible.get(eligible.size() - 1);
+        return eligible.getLast();
     }
 
-    private double adjustedWeight(FishDefinition definition, BaitDefinition bait) {
-        double multiplier = bait == null ? 1.0 : bait.multiplierFor(definition);
-        return Math.max(0.0, definition.chance() * multiplier);
+    private double adjustedWeight(FishDefinition definition, BaitDefinition bait, ToDoubleFunction<FishDefinition> externalMultiplier) {
+        double baitMultiplier = bait == null ? 1.0 : bait.multiplierFor(definition);
+        double extraMultiplier = externalMultiplier == null ? 1.0 : Math.max(0.0, externalMultiplier.applyAsDouble(definition));
+        return Math.max(0.0, definition.chance() * baitMultiplier * extraMultiplier);
     }
 
     public FishDefinition get(String id) {
