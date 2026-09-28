@@ -1,0 +1,75 @@
+fish:
+  river_carp:
+    display-name: "River Carp"
+    material: COD
+    rarity: COMMON
+    chance: 55.0
+    min-weight: 0.8
+    max-weight: 4.5
+    min-depth: 1
+    max-depth: 64
+    pull-min: 0.4
+    pull-max: 1.2
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["ANY"]
+
+  silver_salmon:
+    display-name: "Silver Salmon"
+    material: SALMON
+    rarity: UNCOMMON
+    chance: 28.0
+    min-weight: 1.2
+    max-weight: 6.8
+    min-depth: 2
+    max-depth: 64
+    pull-min: 0.8
+    pull-max: 1.8
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["ANY"]
+
+  moon_koi:
+    display-name: "Moon Koi"
+    material: TROPICAL_FISH
+    rarity: RARE
+    chance: 12.0
+    min-weight: 1.5
+    max-weight: 8.5
+    min-depth: 4
+    max-depth: 30
+    pull-min: 1.0
+    pull-max: 2.6
+    biomes: ["*"]
+    weather: ["CLEAR", "RAIN"]
+    time: ["NIGHT"]
+
+  abyss_eel:
+    display-name: "Abyss Eel"
+    material: PUFFERFISH
+    rarity: EPIC
+    chance: 4.5
+    min-weight: 4.0
+    max-weight: 18.0
+    min-depth: 20
+    max-depth: 64
+    pull-min: 1.4
+    pull-max: 3.2
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["NIGHT"]
+
+  lunar_leviathan:
+    display-name: "Lunar Leviathan"
+    material: TROPICAL_FISH
+    rarity: LEGENDARY
+    chance: 0.5
+    min-weight: 22.0
+    max-weight: 90.0
+    min-depth: 30
+    max-depth: 64
+    pull-min: 1.8
+    pull-max: 4.2
+    biomes: ["*"]
+    weather: ["THUNDER"]
+    time: ["NIGHT"]
