@@ -8,6 +8,7 @@ import id.menki.cdrmoonfishing.model.FishBehavior;
 import id.menki.cdrmoonfishing.model.FishDefinition;
 import id.menki.cdrmoonfishing.model.FishRarity;
 import id.menki.cdrmoonfishing.registry.FishRegistry;
+import id.menki.cdrmoonfishing.rod.RodManager;
 import id.menki.cdrmoonfishing.stats.PlayerStatsManager;
 import id.menki.cdrmoonfishing.stats.PlayerStatsManager.CatchRecordResult;
 import net.kyori.adventure.text.Component;
@@ -40,6 +41,7 @@ public final class FishingManager {
     private final FishRegistry registry;
     private final BaitManager baitManager;
     private final PlayerStatsManager statsManager;
+    private final RodManager rodManager;
     private final Map<UUID, PreparedEncounter> prepared = new ConcurrentHashMap<>();
     private final Map<UUID, FishingSession> sessions = new ConcurrentHashMap<>();
 
@@ -54,11 +56,12 @@ public final class FishingManager {
 
     private BukkitTask ticker;
 
-    public FishingManager(CdrMoonFishing plugin, FishRegistry registry, BaitManager baitManager, PlayerStatsManager statsManager) {
+    public FishingManager(CdrMoonFishing plugin, FishRegistry registry, BaitManager baitManager, PlayerStatsManager statsManager, RodManager rodManager) {
         this.plugin = plugin;
         this.registry = registry;
         this.baitManager = baitManager;
         this.statsManager = statsManager;
+        this.rodManager = rodManager;
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.rarityKey = new NamespacedKey(plugin, "rarity");
         this.weightKey = new NamespacedKey(plugin, "weight_kg");
@@ -84,7 +87,8 @@ public final class FishingManager {
         String time = timeName(hookLocation.getWorld());
         BaitDefinition bait = baitManager.resolveSelected(player);
 
-        FishDefinition fish = registry.select(region, depth, weather, time, bait);
+        FishDefinition fish = registry.select(region, depth, weather, time, bait,
+                definition -> rodManager.rarityMultiplier(player, definition));
         if (fish == null) {
             prepared.remove(player.getUniqueId());
             player.sendActionBar(Component.text("No fish seems interested in this spot.", NamedTextColor.GRAY));
@@ -95,7 +99,8 @@ public final class FishingManager {
         if (bait != null) {
             if (!baitManager.consume(player, bait)) {
                 bait = null;
-                fish = registry.select(region, depth, weather, time, null);
+                fish = registry.select(region, depth, weather, time, null,
+                        definition -> rodManager.rarityMultiplier(player, definition));
                 if (fish == null) {
                     prepared.remove(player.getUniqueId());
                     return false;
@@ -150,7 +155,9 @@ public final class FishingManager {
         session.lastPulseAt(now);
         EncounterPhase phase = session.fish().phaseAt(session.progress());
         double phaseMultiplier = phase == null ? 1.0 : phase.reelPowerMultiplier();
-        double power = plugin.getConfig().getDouble("minigame.reel-power", 7.5) * phaseMultiplier;
+        double power = plugin.getConfig().getDouble("minigame.reel-power", 7.5)
+                * phaseMultiplier
+                * rodManager.reelMultiplier(player);
         session.tension(clamp(session.tension() + power, 0.0, 100.0));
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.35f, 1.55f);
         sendBar(player, session);
