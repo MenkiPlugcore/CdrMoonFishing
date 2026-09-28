@@ -1,12 +1,15 @@
 package id.menki.cdrmoonfishing.listener;
 
+import id.menki.cdrmoonfishing.CdrMoonFishing;
 import id.menki.cdrmoonfishing.market.MarketAccessManager;
+import id.menki.cdrmoonfishing.ui.FishingActionBarRenderer;
 import id.menki.cdrmoonfishing.ui.FishingUiManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public final class FishingUiListener implements Listener {
     private static final int HUB_MARKET_SLOT = 14;
@@ -17,6 +20,9 @@ public final class FishingUiListener implements Listener {
     public FishingUiListener(FishingUiManager ui, MarketAccessManager marketAccess) {
         this.ui = ui;
         this.marketAccess = marketAccess;
+
+        CdrMoonFishing plugin = (CdrMoonFishing) JavaPlugin.getProvidingPlugin(FishingUiListener.class);
+        new FishingActionBarRenderer(plugin).start();
     }
 
     @EventHandler
