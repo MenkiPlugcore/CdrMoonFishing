@@ -1,12 +1,14 @@
 package id.menki.cdrmoonfishing;
 
 import id.menki.cdrmoonfishing.bait.BaitManager;
+import id.menki.cdrmoonfishing.command.FishContractsCommand;
 import id.menki.cdrmoonfishing.command.FishDexCommand;
 import id.menki.cdrmoonfishing.command.FishLeaderboardCommand;
 import id.menki.cdrmoonfishing.command.FishMarketCommand;
 import id.menki.cdrmoonfishing.command.FishRodCommand;
 import id.menki.cdrmoonfishing.command.FishTournamentCommand;
 import id.menki.cdrmoonfishing.command.FishingCommand;
+import id.menki.cdrmoonfishing.contracts.ContractManager;
 import id.menki.cdrmoonfishing.economy.VaultEconomyHook;
 import id.menki.cdrmoonfishing.fishing.FishingManager;
 import id.menki.cdrmoonfishing.integration.IntegrationManager;
@@ -31,6 +33,7 @@ public final class CdrMoonFishing extends JavaPlugin {
     private RodRegistry rodRegistry;
     private BaitManager baitManager;
     private RodManager rodManager;
+    private ContractManager contractManager;
     private PlayerStatsManager playerStatsManager;
     private FishingManager fishingManager;
     private IntegrationManager integrationManager;
@@ -47,6 +50,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         saveResource("fish.yml", false);
         saveResource("bait.yml", false);
         saveResource("rod.yml", false);
+        saveResource("contracts.yml", false);
 
         this.fishRegistry = new FishRegistry(this);
         this.fishRegistry.reload();
@@ -63,6 +67,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         this.economyHook = new VaultEconomyHook(this);
         this.economyHook.refresh();
 
+        this.contractManager = new ContractManager(this, economyHook, baitRegistry, rodManager);
         this.fishItemProviderManager = new FishItemProviderManager(this);
         this.catchItemUpgradeManager = new CatchItemUpgradeManager(this, fishItemProviderManager);
 
@@ -72,7 +77,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         this.playerStatsManager.registerCatchObserver(catchItemUpgradeManager);
         this.globalLeaderboardManager = new GlobalLeaderboardManager(this);
 
-        this.fishingManager = new FishingManager(this, fishRegistry, baitManager, playerStatsManager, rodManager);
+        this.fishingManager = new FishingManager(this, fishRegistry, baitManager, playerStatsManager, rodManager, contractManager);
         this.fishMarketManager = new FishMarketManager(this, fishRegistry, economyHook);
         getServer().getPluginManager().registerEvents(new FishingListener(fishingManager, baitManager), this);
         getServer().getPluginManager().registerEvents(new FishMarketListener(fishMarketManager), this);
@@ -131,11 +136,22 @@ public final class CdrMoonFishing extends JavaPlugin {
             getLogger().severe("Command 'fishrod' is missing from plugin.yml.");
         }
 
+        FishContractsCommand contractsCommand = new FishContractsCommand(contractManager);
+        PluginCommand fishContracts = getCommand("fishcontracts");
+        if (fishContracts != null) {
+            fishContracts.setExecutor(contractsCommand);
+            fishContracts.setTabCompleter(contractsCommand);
+        } else {
+            getLogger().severe("Command 'fishcontracts' is missing from plugin.yml.");
+        }
+
         getLogger().info("CdrMoonFishing v" + getPluginMeta().getVersion() + " enabled.");
         getLogger().info("Crossplay input mode: vanilla rod + standard chest market GUI + server-side tension.");
         getLogger().info("FishDex statistics storage: YAML per player UUID.");
         getLogger().info("Custom fish items: VANILLA / ItemsAdder / MMOItems / AUTO with vanilla fallback.");
         getLogger().info("Fishing rod progression: " + rodRegistry.tiers().size() + " tiers loaded.");
+        getLogger().info("Daily fishing contracts: " + contractManager.definitionCount() + " definitions loaded for "
+                + contractManager.currentDate() + ".");
         getLogger().info("Tournament state: " + (tournamentManager.isActive() ? "ACTIVE" : "INACTIVE")
                 + " | pending payouts: " + tournamentManager.pendingRewardCount());
     }
@@ -152,9 +168,10 @@ public final class CdrMoonFishing extends JavaPlugin {
         fishRegistry.reload();
         baitRegistry.reload();
         rodRegistry.reload();
+        if (contractManager != null) contractManager.reload();
         if (economyHook != null) economyHook.refresh();
         if (fishItemProviderManager != null) fishItemProviderManager.clearWarnings();
-        getLogger().info("Configuration, fish registry, bait registry, rod registry, economy hook and item providers reloaded.");
+        getLogger().info("Configuration, fish registry, bait registry, rod registry, contracts, economy hook and item providers reloaded.");
     }
 
     public FishingManager getFishingManager() { return fishingManager; }
@@ -164,6 +181,7 @@ public final class CdrMoonFishing extends JavaPlugin {
     public FishRegistry getFishRegistry() { return fishRegistry; }
     public RodRegistry getRodRegistry() { return rodRegistry; }
     public RodManager getRodManager() { return rodManager; }
+    public ContractManager getContractManager() { return contractManager; }
     public PlayerStatsManager getPlayerStatsManager() { return playerStatsManager; }
     public VaultEconomyHook getEconomyHook() { return economyHook; }
     public FishMarketManager getFishMarketManager() { return fishMarketManager; }
