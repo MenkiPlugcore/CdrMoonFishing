@@ -25,6 +25,7 @@ public final class CatchItemUpgradeManager implements CatchObserver {
     private final NamespacedKey caughtAtKey;
     private final NamespacedKey behaviorKey;
     private final NamespacedKey baitKey;
+    private final NamespacedKey catchUidKey;
     private final NamespacedKey providerKey;
 
     public CatchItemUpgradeManager(JavaPlugin plugin, FishItemProviderManager providers) {
@@ -37,6 +38,7 @@ public final class CatchItemUpgradeManager implements CatchObserver {
         this.caughtAtKey = new NamespacedKey(plugin, "caught_at");
         this.behaviorKey = new NamespacedKey(plugin, "behavior");
         this.baitKey = new NamespacedKey(plugin, "bait_used");
+        this.catchUidKey = new NamespacedKey(plugin, "catch_uid");
         this.providerKey = new NamespacedKey(plugin, "item_provider");
     }
 
@@ -119,6 +121,7 @@ public final class CatchItemUpgradeManager implements CatchObserver {
         copyLong(from, to, caughtAtKey);
         copyString(from, to, behaviorKey);
         copyString(from, to, baitKey);
+        copyString(from, to, catchUidKey);
         to.set(providerKey, PersistentDataType.STRING, providerUsed);
 
         upgraded.setItemMeta(providerMeta);
