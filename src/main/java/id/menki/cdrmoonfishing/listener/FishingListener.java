@@ -2,6 +2,7 @@ package id.menki.cdrmoonfishing.listener;
 
 import id.menki.cdrmoonfishing.bait.BaitManager;
 import id.menki.cdrmoonfishing.fishing.FishingManager;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -33,9 +34,10 @@ public final class FishingListener implements Listener {
             case CAUGHT_FISH -> {
                 event.setCancelled(true);
                 event.setExpToDrop(0);
+                Location hookLocation = event.getHook().getLocation().clone();
                 if (event.getCaught() != null) event.getCaught().remove();
                 event.getHook().remove();
-                fishingManager.startPrepared(event.getPlayer(), event.getHook().getLocation());
+                fishingManager.startPrepared(event.getPlayer(), hookLocation);
             }
             case FAILED_ATTEMPT, REEL_IN, IN_GROUND -> fishingManager.clearPrepared(event.getPlayer());
             default -> { }
