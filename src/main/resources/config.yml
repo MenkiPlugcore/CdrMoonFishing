@@ -1,5 +1,6 @@
-# CdrMoonFishing v0.6.0
-# Crossplay-first: gameplay, market and tournament feedback stay server-side.
+# CdrMoonFishing v1.0.0
+# Missing keys are merged automatically on startup/reload.
+config-version: 1
 
 minigame:
   tick-period: 5
@@ -42,6 +43,13 @@ economy:
     featured-multiplier: 1.35
     timezone: "Asia/Jakarta"
 
+# Catch IDs are added to new v1.0 catches. The redemption ledger blocks
+# copied/duplicated catches from being sold more than once.
+security:
+  market:
+    # false keeps pre-v1.0 fish sellable. Set true after legacy stock is gone.
+    require-catch-uid: false
+
 tournament:
   points:
     weight-multiplier: 0.25
@@ -61,5 +69,6 @@ messages:
   bite-common: "Something is biting..."
   bite-unusual: "Something unusual is biting..."
   bite-legendary: "Something HUGE took the bait..."
-  encounter-start: "FISH ON! Keep tension between 35% and 70%."
+  encounter-start: "FISH ON! Keep the line under control."
   escaped: "The fish escaped."
+  market-duplicate-blocked: "This catch identity has already been redeemed."
