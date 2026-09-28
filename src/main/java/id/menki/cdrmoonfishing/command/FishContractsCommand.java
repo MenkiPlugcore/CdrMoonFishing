@@ -19,43 +19,41 @@ import java.util.Locale;
 public final class FishContractsCommand implements CommandExecutor, TabCompleter {
     private final ContractManager manager;
 
-    public FishContractsCommand(ContractManager manager) {
-        this.manager = manager;
-    }
+    public FishContractsCommand(ContractManager manager) { this.manager = manager; }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("cdrmoonfishing.admin")) {
-                sender.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Kamu tidak punya izin.", NamedTextColor.RED));
                 return true;
             }
             manager.reload();
-            sender.sendMessage(Component.text("Daily fishing contracts reloaded.", NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("Kontrak memancing harian berhasil dimuat ulang.", NamedTextColor.GREEN));
             return true;
         }
 
         if (args.length > 0 && args[0].equalsIgnoreCase("reset")) {
             if (!sender.hasPermission("cdrmoonfishing.admin")) {
-                sender.sendMessage(Component.text("No permission.", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Kamu tidak punya izin.", NamedTextColor.RED));
                 return true;
             }
             if (args.length < 2) {
-                sender.sendMessage(Component.text("Usage: /fishcontracts reset <player>", NamedTextColor.YELLOW));
+                sender.sendMessage(Component.text("Penggunaan: /fishcontracts reset <player>", NamedTextColor.YELLOW));
                 return true;
             }
             Player target = Bukkit.getPlayerExact(args[1]);
             if (target == null) {
-                sender.sendMessage(Component.text("Player must be online.", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Player harus sedang online.", NamedTextColor.RED));
                 return true;
             }
             manager.reset(target);
-            sender.sendMessage(Component.text("Reset today's contracts for " + target.getName() + ".", NamedTextColor.GREEN));
+            sender.sendMessage(Component.text("Kontrak hari ini untuk " + target.getName() + " sudah direset.", NamedTextColor.GREEN));
             return true;
         }
 
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Players: /fishcontracts | Admin: /fishcontracts reload | reset <player>");
+            sender.sendMessage("Player: /fishcontracts | Admin: /fishcontracts reload | reset <player>");
             return true;
         }
 
@@ -69,11 +67,11 @@ public final class FishContractsCommand implements CommandExecutor, TabCompleter
         long hours = millis / 3_600_000L;
         long minutes = (millis % 3_600_000L) / 60_000L;
 
-        player.sendMessage(Component.text("━━━━━━━━ DAILY FISHING CONTRACTS ━━━━━━━━", NamedTextColor.AQUA));
-        player.sendMessage(Component.text("Date: " + manager.currentDate() + " • Reset in " + hours + "h " + minutes + "m", NamedTextColor.DARK_GRAY));
+        player.sendMessage(Component.text("━━━━━━━━ KONTRAK MEMANCING HARIAN ━━━━━━━━", NamedTextColor.AQUA));
+        player.sendMessage(Component.text("Tanggal: " + manager.currentDate() + " • Reset dalam " + hours + "j " + minutes + "m", NamedTextColor.DARK_GRAY));
 
         if (contracts.isEmpty()) {
-            player.sendMessage(Component.text("No daily contracts are configured.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Belum ada kontrak harian yang dikonfigurasi.", NamedTextColor.GRAY));
             return;
         }
 
@@ -86,8 +84,8 @@ public final class FishContractsCommand implements CommandExecutor, TabCompleter
 
             player.sendMessage(Component.text(marker + " [" + index + "] " + definition.displayName(), color));
             player.sendMessage(Component.text("  " + definition.description(), NamedTextColor.GRAY));
-            player.sendMessage(Component.text("  Progress: " + value, progress.completed() ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
-            player.sendMessage(Component.text("  Reward: " + manager.rewardSummary(definition), NamedTextColor.GOLD));
+            player.sendMessage(Component.text("  Progres: " + value, progress.completed() ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("  Hadiah: " + manager.rewardSummary(definition), NamedTextColor.GOLD));
             index++;
         }
     }
@@ -101,9 +99,7 @@ public final class FishContractsCommand implements CommandExecutor, TabCompleter
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1 && sender.hasPermission("cdrmoonfishing.admin")) {
-            return filter(List.of("reload", "reset"), args[0]);
-        }
+        if (args.length == 1 && sender.hasPermission("cdrmoonfishing.admin")) return filter(List.of("reload", "reset"), args[0]);
         if (args.length == 2 && args[0].equalsIgnoreCase("reset") && sender.hasPermission("cdrmoonfishing.admin")) {
             return filter(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
         }
@@ -113,9 +109,7 @@ public final class FishContractsCommand implements CommandExecutor, TabCompleter
     private List<String> filter(List<String> values, String prefix) {
         String lowered = prefix.toLowerCase(Locale.ROOT);
         List<String> result = new ArrayList<>();
-        for (String value : values) {
-            if (value.toLowerCase(Locale.ROOT).startsWith(lowered)) result.add(value);
-        }
+        for (String value : values) if (value.toLowerCase(Locale.ROOT).startsWith(lowered)) result.add(value);
         return result;
     }
 }
