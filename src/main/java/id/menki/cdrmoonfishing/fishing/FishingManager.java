@@ -95,7 +95,7 @@ public final class FishingManager {
                 definition -> rodManager.rarityMultiplier(player, definition));
         if (fish == null) {
             prepared.remove(player.getUniqueId());
-            player.sendActionBar(Component.text("No fish seems interested in this spot.", NamedTextColor.GRAY));
+            player.sendActionBar(Component.text("Sepertinya tidak ada ikan yang tertarik di sini.", NamedTextColor.GRAY));
             return false;
         }
 
@@ -117,7 +117,7 @@ public final class FishingManager {
         prepared.put(player.getUniqueId(), new PreparedEncounter(fish, region, depth, weather, time, baitId));
         Component hint = Component.text(biteHint(fish.rarity()), rarityColor(fish.rarity()));
         if (bait != null) hint = hint.append(Component.text("  • " + bait.displayName(), NamedTextColor.GOLD));
-        if (!fish.phases().isEmpty()) hint = hint.append(Component.text("  • Multi-Phase", NamedTextColor.LIGHT_PURPLE));
+        if (!fish.phases().isEmpty()) hint = hint.append(Component.text("  • Multi-Fase", NamedTextColor.LIGHT_PURPLE));
         player.sendActionBar(hint);
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_SPLASH, 0.8f, 1.15f);
         return true;
@@ -142,7 +142,7 @@ public final class FishingManager {
         sessions.put(player.getUniqueId(), session);
         EncounterPhase phase = syncPhase(player, session, true);
         if (phase == null) {
-            player.sendTitle("§b§lFISH ON!", "§7" + encounter.fish().behavior().displayName() + " behavior", 5, 30, 10);
+            player.sendTitle("§b§lIKAN TERSANGKUT!", "§7Perilaku: " + encounter.fish().behavior().displayName(), 5, 30, 10);
         }
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_RETRIEVE, 1.0f, 0.9f);
         sendBar(player, session);
@@ -210,11 +210,8 @@ public final class FishingManager {
             session.tension(clamp(session.tension() + pull + behaviorForce - slack + jitter, 0.0, 100.0));
 
             boolean safe = session.tension() >= safeMin && session.tension() <= safeMax;
-            if (safe) {
-                session.progress(clamp(session.progress() + (baseSafeProgress * progressMultiplier), 0.0, 100.0));
-            } else {
-                session.progress(clamp(session.progress() - progressLoss, 0.0, 100.0));
-            }
+            if (safe) session.progress(clamp(session.progress() + (baseSafeProgress * progressMultiplier), 0.0, 100.0));
+            else session.progress(clamp(session.progress() - progressLoss, 0.0, 100.0));
 
             boolean dangerous = session.tension() <= dangerLow || session.tension() >= dangerHigh;
             session.dangerTicks(dangerous ? session.dangerTicks() + 1 : Math.max(0, session.dangerTicks() - 1));
@@ -227,12 +224,10 @@ public final class FishingManager {
                 continue;
             }
             if (session.dangerTicks() >= dangerGrace) {
-                failCatch(player, session, session.tension() >= dangerHigh ? "The line snapped!" : "The line went slack!");
+                failCatch(player, session, session.tension() >= dangerHigh ? "Senarnya putus!" : "Senarnya terlalu kendur!");
                 continue;
             }
-            if (System.currentTimeMillis() - session.startedAt() >= timeoutMs) {
-                failCatch(player, session, "The fish escaped!");
-            }
+            if (System.currentTimeMillis() - session.startedAt() >= timeoutMs) failCatch(player, session, "Ikannya lepas!");
         }
     }
 
@@ -250,12 +245,12 @@ public final class FishingManager {
                     ? "§b§l" + phase.displayName().toUpperCase(Locale.ROOT)
                     : phase.title();
             String subtitle = phase.subtitle() == null || phase.subtitle().isBlank()
-                    ? "§7" + phase.behavior().displayName() + " behavior"
+                    ? "§7Perilaku: " + phase.behavior().displayName()
                     : phase.subtitle();
             player.sendTitle(title, subtitle, initial ? 5 : 3, initial ? 32 : 25, 8);
             playPhaseSound(player, phase);
             if (!initial) {
-                player.sendMessage(Component.text("⚡ Encounter phase: ", NamedTextColor.LIGHT_PURPLE)
+                player.sendMessage(Component.text("⚡ Fase pertarungan: ", NamedTextColor.LIGHT_PURPLE)
                         .append(Component.text(phase.displayName(), NamedTextColor.AQUA)));
             }
         }
@@ -324,22 +319,20 @@ public final class FishingManager {
         CatchRecordResult record = statsManager.recordCatch(player, session.fish(), weight);
         contractManager.recordCatch(player, session.fish(), weight, session);
 
-        player.sendTitle("§a§lCATCH!", "§f" + session.fish().displayName() + " §7• §b" + String.format(Locale.US, "%.2f kg", weight), 5, 45, 10);
-        player.sendMessage(Component.text("Caught ", NamedTextColor.GRAY)
+        player.sendTitle("§a§lDAPAT!", "§f" + session.fish().displayName() + " §7• §b" + String.format(Locale.US, "%.2f kg", weight), 5, 45, 10);
+        player.sendMessage(Component.text("Berhasil menangkap ", NamedTextColor.GRAY)
                 .append(Component.text(session.fish().displayName(), rarityColor(session.fish().rarity())))
-                .append(Component.text(" • " + String.format(Locale.US, "%.2f kg", weight) + " • depth " + session.depth(), NamedTextColor.GRAY)));
+                .append(Component.text(" • " + String.format(Locale.US, "%.2f kg", weight) + " • kedalaman " + session.depth(), NamedTextColor.GRAY)));
 
         if (record.newDiscovery()) {
-            player.sendMessage(Component.text("✦ FISHDEX DISCOVERY! ", NamedTextColor.AQUA)
+            player.sendMessage(Component.text("✦ PENEMUAN FISHDEX! ", NamedTextColor.AQUA)
                     .append(Component.text(session.fish().displayName(), rarityColor(session.fish().rarity())))
                     .append(Component.text(" • " + record.discoveredSpecies() + "/" + registry.definitions().size(), NamedTextColor.GRAY)));
         }
         if (record.newSpeciesRecord() && !record.newDiscovery()) {
-            player.sendMessage(Component.text("★ New species record: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GREEN));
+            player.sendMessage(Component.text("★ Rekor spesies baru: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GREEN));
         }
-        if (record.newOverallRecord()) {
-            player.sendMessage(Component.text("★ NEW PERSONAL BIGGEST CATCH!", NamedTextColor.GOLD));
-        }
+        if (record.newOverallRecord()) player.sendMessage(Component.text("★ REKOR TANGKAPAN TERBESAR BARU!", NamedTextColor.GOLD));
 
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.9f, record.newDiscovery() ? 1.45f : 1.2f);
     }
@@ -352,19 +345,16 @@ public final class FishingManager {
         meta.displayName(Component.text(fish.displayName(), rarityColor(fish.rarity())).decorate(TextDecoration.BOLD));
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text(fish.rarity().displayName(), rarityColor(fish.rarity())));
-        if (fish.phases().isEmpty()) {
-            lore.add(Component.text("Behavior: " + fish.behavior().displayName(), NamedTextColor.GRAY));
-        } else {
-            lore.add(Component.text("Encounter: " + fish.phases().size() + " phases", NamedTextColor.LIGHT_PURPLE));
-        }
-        lore.add(Component.text("Weight: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GRAY));
+        if (fish.phases().isEmpty()) lore.add(Component.text("Perilaku: " + fish.behavior().displayName(), NamedTextColor.GRAY));
+        else lore.add(Component.text("Pertarungan: " + fish.phases().size() + " fase", NamedTextColor.LIGHT_PURPLE));
+        lore.add(Component.text("Berat: " + String.format(Locale.US, "%.2f kg", weight), NamedTextColor.GRAY));
         if (session.baitId() != null) {
             BaitDefinition bait = baitManager.registry().get(session.baitId());
-            lore.add(Component.text("Bait: " + (bait == null ? session.baitId() : bait.displayName()), NamedTextColor.DARK_GRAY));
+            lore.add(Component.text("Umpan: " + (bait == null ? session.baitId() : bait.displayName()), NamedTextColor.DARK_GRAY));
         }
-        lore.add(Component.text("Region: " + session.region(), NamedTextColor.DARK_GRAY));
-        lore.add(Component.text("Depth: " + session.depth() + " blocks", NamedTextColor.DARK_GRAY));
-        lore.add(Component.text("Caught by: " + player.getName(), NamedTextColor.DARK_GRAY));
+        lore.add(Component.text("Wilayah: " + session.region(), NamedTextColor.DARK_GRAY));
+        lore.add(Component.text("Kedalaman: " + session.depth() + " blok", NamedTextColor.DARK_GRAY));
+        lore.add(Component.text("Ditangkap oleh: " + player.getName(), NamedTextColor.DARK_GRAY));
         meta.lore(lore);
 
         meta.getPersistentDataContainer().set(fishIdKey, PersistentDataType.STRING, fish.id());
@@ -382,14 +372,14 @@ public final class FishingManager {
 
     private void failCatch(Player player, FishingSession session, String reason) {
         sessions.remove(player.getUniqueId());
-        player.sendTitle("§c§lESCAPED", "§7" + reason, 5, 35, 10);
+        player.sendTitle("§c§lLEPAS", "§7" + reason, 5, 35, 10);
         player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 0.8f, 0.8f);
     }
 
     public void cancel(Player player, boolean notify) {
         prepared.remove(player.getUniqueId());
         FishingSession removed = sessions.remove(player.getUniqueId());
-        if (notify && removed != null) player.sendActionBar(Component.text("Fishing encounter cancelled.", NamedTextColor.GRAY));
+        if (notify && removed != null) player.sendActionBar(Component.text("Pertarungan memancing dibatalkan.", NamedTextColor.GRAY));
     }
 
     public void clearPrepared(Player player) { prepared.remove(player.getUniqueId()); }
@@ -413,14 +403,9 @@ public final class FishingManager {
         int z = hookLocation.getBlockZ();
         int y = hookLocation.getBlockY();
 
-        // The bobber normally sits inside the surface water block. Count that block as depth 1.
-        // Some client/server positions can resolve the bobber one block above the water surface,
-        // so fall back one block when the current block itself is not water.
         if (!isWaterColumn(world.getBlockAt(x, y, z).getType())) {
             int belowY = y - 1;
-            if (belowY < world.getMinHeight() || !isWaterColumn(world.getBlockAt(x, belowY, z).getType())) {
-                return 0;
-            }
+            if (belowY < world.getMinHeight() || !isWaterColumn(world.getBlockAt(x, belowY, z).getType())) return 0;
             y = belowY;
         }
 
@@ -461,12 +446,12 @@ public final class FishingManager {
         NamedTextColor barColor = session.tension() >= safe[0] && session.tension() <= safe[1]
                 ? NamedTextColor.GREEN
                 : (session.tension() <= 10.0 || session.tension() >= 90.0 ? NamedTextColor.RED : NamedTextColor.YELLOW);
-        String state = phase == null ? behavior.name() : phase.displayName().toUpperCase(Locale.ROOT);
+        String state = phase == null ? behavior.displayName().toUpperCase(Locale.ROOT) : phase.displayName().toUpperCase(Locale.ROOT);
 
         Component actionBar = Component.text("[" + state + "] ", phase == null ? NamedTextColor.DARK_AQUA : NamedTextColor.LIGHT_PURPLE)
-                .append(Component.text("Tension ", NamedTextColor.AQUA))
+                .append(Component.text("Senar ", NamedTextColor.AQUA))
                 .append(Component.text(bar, barColor))
-                .append(Component.text(String.format(Locale.US, " %.0f%%  Catch %.0f%%", session.tension(), session.progress()), NamedTextColor.GRAY));
+                .append(Component.text(String.format(Locale.US, " %.0f%%  Tangkap %.0f%%", session.tension(), session.progress()), NamedTextColor.GRAY));
         player.sendActionBar(actionBar);
     }
 
@@ -488,9 +473,9 @@ public final class FishingManager {
 
     private String biteHint(FishRarity rarity) {
         return switch (rarity) {
-            case COMMON, UNCOMMON -> "Something is biting...";
-            case RARE, EPIC -> "Something unusual is biting...";
-            case LEGENDARY -> "Something HUGE took the bait...";
+            case COMMON, UNCOMMON -> "Ada ikan yang menyambar...";
+            case RARE, EPIC -> "Ada sesuatu yang tidak biasa menyambar...";
+            case LEGENDARY -> "SESUATU YANG BESAR memakan umpannya...";
         };
     }
 
