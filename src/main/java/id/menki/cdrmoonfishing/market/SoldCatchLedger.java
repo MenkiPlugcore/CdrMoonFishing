@@ -32,10 +32,17 @@ public final class SoldCatchLedger {
 
     public boolean markSold(String catchUid) {
         if (catchUid == null || catchUid.isBlank() || !sold.add(catchUid)) return false;
-        yaml.set("sold", sold.stream().sorted().toList());
-        if (save()) return true;
+        if (persist()) return true;
         sold.remove(catchUid);
-        yaml.set("sold", sold.stream().sorted().toList());
+        persistQuietly();
+        return false;
+    }
+
+    public boolean unmarkSold(String catchUid) {
+        if (catchUid == null || !sold.remove(catchUid)) return false;
+        if (persist()) return true;
+        sold.add(catchUid);
+        persistQuietly();
         return false;
     }
 
@@ -43,13 +50,23 @@ public final class SoldCatchLedger {
         return sold.size();
     }
 
-    private boolean save() {
+    private boolean persist() {
+        yaml.set("sold", sold.stream().sorted().toList());
         try {
             yaml.save(file);
             return true;
         } catch (IOException ex) {
             plugin.getLogger().severe("Could not save sold catch ledger: " + ex.getMessage());
             return false;
+        }
+    }
+
+    private void persistQuietly() {
+        yaml.set("sold", sold.stream().sorted().toList());
+        try {
+            yaml.save(file);
+        } catch (IOException ignored) {
+            // Primary failure is already logged by persist().
         }
     }
 }
