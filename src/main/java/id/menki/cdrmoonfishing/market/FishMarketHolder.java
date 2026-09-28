@@ -6,7 +6,9 @@ import org.jetbrains.annotations.NotNull;
 
 public final class FishMarketHolder implements InventoryHolder {
     @Override
+    @SuppressWarnings("DataFlowIssue")
     public @NotNull Inventory getInventory() {
-        throw new UnsupportedOperationException("FishMarketHolder is marker-only.");
+        // Marker holder used only to identify Fish Market views.
+        return null;
     }
 }
