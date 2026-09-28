@@ -1,12 +1,12 @@
-# CdrMoonFishing v0.9.5
-# FishDex milestone rewards.
-# Collection Luck is permanent per player once a milestone is claimed.
-# It stacks with fishing rod rarity luck, but does not bypass fish requirements
-# such as time, weather, depth or required bait.
+# CdrMoonFishing v1.0.6
+# Hadiah milestone FishDex.
+# Luck Koleksi bersifat permanen per-player setelah milestone tercapai.
+# Bonus ini ditumpuk dengan luck joran, tetapi tidak melewati syarat ikan
+# seperti waktu, cuaca, kedalaman, atau umpan wajib.
 
 milestones:
   collection_25:
-    display-name: "FishDex Explorer"
+    display-name: "Penjelajah FishDex"
     type: COLLECTION_PERCENT
     target-percent: 25
     reward:
@@ -17,7 +17,7 @@ milestones:
       collection-luck: 0.01
 
   collection_50:
-    display-name: "FishDex Collector"
+    display-name: "Kolektor FishDex"
     type: COLLECTION_PERCENT
     target-percent: 50
     reward:
@@ -28,7 +28,7 @@ milestones:
       collection-luck: 0.02
 
   collection_75:
-    display-name: "FishDex Hunter"
+    display-name: "Pemburu FishDex"
     type: COLLECTION_PERCENT
     target-percent: 75
     reward:
@@ -39,7 +39,7 @@ milestones:
       collection-luck: 0.03
 
   collection_100:
-    display-name: "Master of the FishDex"
+    display-name: "Master FishDex"
     type: COLLECTION_PERCENT
     target-percent: 100
     reward:
@@ -50,7 +50,7 @@ milestones:
       collection-luck: 0.06
 
   first_legendary:
-    display-name: "Legendary Discovery"
+    display-name: "Penemuan Legendaris"
     type: FIRST_LEGENDARY
     reward:
       money: 2500.0
@@ -59,9 +59,9 @@ milestones:
       rod-xp: 150
       collection-luck: 0.03
 
-# Future catalog example:
+# Contoh katalog untuk pengembangan berikutnya:
 #  rare_collection:
-#    display-name: "Rare Specialist"
+#    display-name: "Spesialis Ikan Langka"
 #    type: RARITY_COMPLETE
 #    rarity: RARE
 #    reward:
