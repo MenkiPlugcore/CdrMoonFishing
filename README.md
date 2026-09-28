@@ -1,30 +1,105 @@
 # CdrMoonFishing
 
-Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay server-side so Java and Bedrock players through Geyser use the same fishing flow.
+Crossplay-first custom fishing progression for Paper servers. Core gameplay stays server-side so Java and Bedrock players through Geyser share the same fishing loop.
 
 ## Current version
 
-`v0.9.5` — FishDex Milestones + Collection Rewards
+`v1.0.0` — Production Release
 
-## Implemented
+## Core gameplay
 
-- Custom fishing encounters with rarity, weight, depth, biome, weather and time conditions
+- Fish rarity, weight, biome, depth, weather and time conditions
 - Bait system
 - CALM, ERRATIC, AGGRESSIVE and DIVING behavior profiles
 - Rare/Epic/Legendary multi-phase encounters
 - Persistent FishDex and lifetime player statistics
-- FishDex milestone rewards with permanent Collection Luck
-- Vault-backed Fish Market with per-species price/kg
-- Daily Featured Catch market bonus
-- Live fishing tournaments + lifetime leaderboards
-- Runtime ItemsAdder/MMItems custom fish item providers with vanilla fallback
-- Persistent progression fishing rods with XP, auto tier upgrades, reel bonus and rarity luck
-- Daily fishing contracts with deterministic daily rotation
-- Contract rewards through Vault money, custom bait and Rod XP
+- FishDex milestones with permanent Collection Luck
+- Progression fishing rods with tier XP, reel power and rarity luck
+- Daily fishing contracts
+- Vault-backed Fish Market + Featured Catch
+- Live tournaments + lifetime leaderboards
+- ItemsAdder/MMOItems custom fish item providers with vanilla fallback
 
-## FishDex Milestones
+## v1.0.0 production polish
 
-FishDex completion now provides permanent player progression rather than acting only as a checklist.
+### FishDex GUI
+
+`/fishdex [page]` now opens a crossplay-safe chest GUI.
+
+- 45 species per page
+- undiscovered species stay hidden as `???`
+- discovered cards show rarity, catch count and personal best weight
+- depth and required bait hints
+- FishDex completion and permanent Collection Luck summary
+- direct access to milestone progress
+
+### Leaderboard GUI
+
+`/fishleaderboard [catches|weight|biggest|legendary] [page]`
+
+Players get an interactive chest GUI and can switch between metrics without retyping commands. Console still receives text output.
+
+### Tournament GUI
+
+`/fishtournament` or `/fishtournament top`
+
+Players get a live tournament board with score, catch count, mode, remaining time and participant count. Admin start/stop/cancel commands remain command based.
+
+### Market anti-duplicate protection
+
+New v1.0 catches receive a unique `catch_uid` PDC identity. The Fish Market stores redeemed identities in:
+
+```text
+plugins/CdrMoonFishing/sold-catches.yml
+```
+
+A duplicated/copied catch with the same identity cannot be sold twice. Custom ItemsAdder/MMOItems fish preserve the identity when their base item is replaced.
+
+Batch selling also blocks:
+
+- already redeemed catch IDs
+- duplicate IDs inside the same sale batch
+- identified fish stacked above amount 1
+
+Legacy pre-v1 fish remain sellable by default. After old stock has left the economy, strict mode can be enabled:
+
+```yaml
+security:
+  market:
+    require-catch-uid: true
+```
+
+### Safer upgrades
+
+`config.yml` now has `config-version`. Missing default keys are copied into existing configs automatically during startup and `/fishing reload`, so normal upgrades do not require deleting configuration files.
+
+### Production diagnostics
+
+```text
+/fishdoctor
+```
+
+Aliases: `/fdoctor`, `/fishingdoctor`.
+
+The doctor reports:
+
+- plugin/server/Java versions
+- registry counts
+- active/prepared encounters
+- cached statistics profiles
+- tournament state and pending payouts
+- Vault/integration status
+- market redemption ledger count
+- legacy-sale security mode
+- data-folder writability
+
+### Stability fixes
+
+- caches hook location before removing the fishing bobber
+- FishDex percentage milestones count only species still present in the active fish registry
+- FishDex GUI independently counts active species, preventing removed/renamed fish from pushing completion above 100%
+
+## FishDex milestones
 
 ```text
 /fishmilestones
@@ -33,14 +108,7 @@ FishDex completion now provides permanent player progression rather than acting 
 
 Aliases: `/fmilestones`, `/fishdexrewards`, `/fdrewards`.
 
-Admin utilities:
-
-```text
-/fishmilestones reload
-/fishmilestones reset <player>
-```
-
-Default milestones:
+Default progression:
 
 ```text
 25% FishDex   FishDex Explorer
@@ -50,72 +118,17 @@ Default milestones:
 First LEGENDARY catch  Legendary Discovery
 ```
 
-Rewards can combine:
-
-```text
-Vault money
-CdrMoonFishing bait
-Rod XP
-Permanent Collection Luck
-```
-
-Default total Collection Luck reaches +15% after completing all default percentage milestones and the First Legendary milestone. Collection Luck stacks with progression-rod rarity luck and affects weighted fish selection, but never bypasses species requirements such as bait, depth, weather or time.
-
-Milestone player state is stored under:
-
-```text
-plugins/CdrMoonFishing/milestones/players/<uuid>.yml
-```
-
-Milestone definitions live in:
-
-```text
-plugins/CdrMoonFishing/milestones.yml
-```
-
-Supported milestone types:
-
-```text
-COLLECTION_PERCENT
-FIRST_LEGENDARY
-RARITY_COMPLETE
-```
-
-`RARITY_COMPLETE` is included for larger future fish catalogs, for example rewarding a player after discovering every RARE species.
+Rewards can combine Vault money, bait, Rod XP and permanent Collection Luck.
 
 ## Daily Fishing Contracts
-
-Three contracts are selected globally each day by default. Every player sees the same daily set, but progression and rewards are tracked per UUID.
 
 ```text
 /fishcontracts
 ```
 
-Aliases: `/fcontracts`, `/fishingcontracts`, `/fq`.
-
-Admin utilities:
-
-```text
-/fishcontracts reload
-/fishcontracts reset <player>
-```
-
-Default contract pool:
-
-```text
-Rare Hunter        Catch 5 RARE-or-better fish
-Heavy Haul         Catch 30 kg total
-Moonlit Koi        Catch 1 Moon Koi at night
-Shrimp Specialist  Catch 3 fish using Shrimp bait
-Deep Water Hunt    Catch 3 fish at depth 20+
-Storm Fisher       Catch 2 fish during thunder
-```
-
-A deterministic subset is selected from `contracts.yml` each date. Default timezone is `Asia/Jakarta`.
+Three contracts are selected globally each day by default, with per-player progress. Conditions can use rarity, total weight, species, bait, depth, time and weather.
 
 ## Fishing Rod Progression
-
-Only CdrMoonFishing progression rods earn rod XP. Normal vanilla fishing rods still work and receive permanent Collection Luck, but do not receive tier-specific Rod Luck or rod XP progression.
 
 ```text
 /fishrod
@@ -134,40 +147,6 @@ Abyssal     1750 XP  • reel 1.20x • luck +22% • XP 1.18x
 Lunar       4000 XP  • reel 1.30x • luck +35% • XP 1.30x
 ```
 
-Tier configuration lives in `rod.yml`.
-
-## Custom fish item providers
-
-Supported provider modes:
-
-```text
-VANILLA
-ITEMSADDER
-MMOITEMS
-AUTO
-```
-
-Provider-backed catches retain CdrMoonFishing PDC, so Fish Market, FishDex, statistics and tournaments continue to work normally.
-
-## Tournament
-
-```text
-/fishtournament
-/fishtournament status
-/fishtournament top [page]
-/fishtournament start <minutes> [points|weight|biggest]
-/fishtournament stop
-/fishtournament cancel
-```
-
-Modes: `POINTS`, `TOTAL_WEIGHT`, `BIGGEST`.
-
-## Global leaderboard
-
-```text
-/fishleaderboard [catches|weight|biggest|legendary] [page]
-```
-
 ## Fish Market
 
 ```text
@@ -178,30 +157,28 @@ Modes: `POINTS`, `TOTAL_WEIGHT`, `BIGGEST`.
 /fishmarket featured
 ```
 
-## FishDex & statistics
+Fish value uses species base price, weight, rarity multiplier, global multiplier and optional Featured Catch bonus.
+
+## Tournament
 
 ```text
-/fishdex [page]
-/fishing stats [player]
+/fishtournament
+/fishtournament top [page]
+/fishtournament start <minutes> [points|weight|biggest]
+/fishtournament stop
+/fishtournament cancel
 ```
 
-Player profiles are stored under `plugins/CdrMoonFishing/players/<uuid>.yml`.
-
-## Bait
-
-```text
-/fishing bait [id|none]
-/fishing givebait <player> <id> [amount]
-```
+Modes: `POINTS`, `TOTAL_WEIGHT`, `BIGGEST`.
 
 ## Requirements
 
 - Paper 1.21.11
 - Java 21
 
-Optional integrations:
+Optional:
 
-- Vault
+- Vault + economy provider
 - ItemsAdder
 - MMOItems
 - Floodgate
@@ -216,29 +193,29 @@ gradle clean build
 Output:
 
 ```text
-build/libs/CdrMoonFishing-0.9.5.jar
+build/libs/CdrMoonFishing-1.0.0.jar
 ```
 
 ## Commands
 
 ```text
+/fishdex [page]
 /fishmilestones [status|reload|reset]
 /fishcontracts [reload|reset]
 /fishrod [info|tiers|give]
+/fishmarket [open|price|sellhand|sellall|featured]
 /fishtournament [status|top|start|stop|cancel]
 /fishleaderboard [catches|weight|biggest|legendary] [page]
-/fishmarket [open|price|sellhand|sellall|featured]
-/fishdex [page]
+/fishdoctor
 /fishing stats [player]
 /fishing bait [id|none]
+/fishing givebait <player> <id> [amount]
 /fishing debug
 /fishing cancel
-/fishing givebait <player> <id> [amount]
 /fishing status
 /fishing reload
 ```
 
-## Roadmap
+## Post-1.0 direction
 
-- v1.0.0 — production polish, GUI pass, balancing, anti-exploit and config/message cleanup
-- later — rod perks/builds, fishing streak/combo mechanics, larger fish catalog, mutations/variants and richer collection progression
+The next progression layer is intended to move further toward collection-heavy fishing games: fish mutations/variants, larger species catalogs, rod perk builds and fishing streak/combo systems.
