@@ -4,7 +4,7 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 
 ## Current version
 
-`v0.8.0` — Fishing Rod Progression / Rod Tier
+`v0.9.0` — Daily Fishing Contracts / Quest
 
 ## Implemented
 
@@ -17,31 +17,87 @@ Crossplay-first custom fishing gameplay for Paper servers. Core mechanics stay s
 - Daily Featured Catch market bonus
 - Live fishing tournaments + lifetime leaderboards
 - Runtime ItemsAdder/MMOItems custom fish item providers with vanilla fallback
-- Persistent progression fishing rods with PDC identity, XP and auto tier upgrades
-- Per-tier reel-power bonus
-- Per-tier rarity-luck multiplier
-- Per-tier rod-XP gain multiplier
+- Persistent progression fishing rods with XP, auto tier upgrades, reel bonus and rarity luck
+- Daily fishing contracts with deterministic daily rotation
+- Contract conditions for rarity, weight, species, bait, depth, time and weather
+- Contract rewards through Vault money, custom bait and Rod XP
+- Pending Vault payout retry for completed contracts
+
+## Daily Fishing Contracts
+
+Three contracts are selected globally each day by default. Every player sees the same daily set, but progression and rewards are tracked per UUID.
+
+```text
+/fishcontracts
+```
+
+Aliases: `/fcontracts`, `/fishingcontracts`, `/fq`.
+
+Admin utilities:
+
+```text
+/fishcontracts reload
+/fishcontracts reset <player>
+```
+
+Default contract pool:
+
+```text
+Rare Hunter        Catch 5 RARE-or-better fish
+Heavy Haul         Catch 30 kg total
+Moonlit Koi        Catch 1 Moon Koi at night
+Shrimp Specialist  Catch 3 fish using Shrimp bait
+Deep Water Hunt    Catch 3 fish at depth 20+
+Storm Fisher       Catch 2 fish during thunder
+```
+
+A deterministic subset is selected from `contracts.yml` each date. Default timezone is `Asia/Jakarta`. Progress resets automatically when the player next catches a fish or opens `/fishcontracts` after the date changes.
+
+Contracts can filter by:
+
+```text
+fish-id
+min-rarity
+bait-id
+min-depth
+max-depth
+time
+weather
+```
+
+Progress modes:
+
+```text
+COUNT   Adds 1 per matching successful catch
+WEIGHT  Adds the caught fish weight in kg
+```
+
+Rewards can combine:
+
+```text
+Vault money
+CdrMoonFishing bait
+Rod XP
+```
+
+If the Vault economy provider is unavailable when a contract completes, the cash reward is stored in the player's contract profile and retried later instead of being lost.
+
+Contract profiles are stored under:
+
+```text
+plugins/CdrMoonFishing/contracts/players/<uuid>.yml
+```
 
 ## Fishing Rod Progression
 
 Only CdrMoonFishing progression rods earn rod XP. Normal vanilla fishing rods still work, but use neutral `1.00x` fishing bonuses and never level up.
 
-Admin distribution:
-
-```text
-/fishrod give <player>
-/fishrod give <player> <tier>
-```
-
-Player inspection:
-
 ```text
 /fishrod
 /fishrod info
 /fishrod tiers
+/fishrod give <player> [tier]
 ```
-
-Aliases: `/frod`, `/fishingrod`.
 
 Default tiers:
 
@@ -53,27 +109,9 @@ Abyssal     1750 XP  • reel 1.20x • luck +22% • XP 1.18x
 Lunar       4000 XP  • reel 1.30x • luck +35% • XP 1.30x
 ```
 
-Tier configuration lives in `rod.yml`. XP is awarded only after a successful custom fishing encounter. The default XP formula is rarity base XP plus a weight contribution, multiplied by the current rod tier's XP multiplier.
-
-Default base XP:
-
-```text
-COMMON      5
-UNCOMMON    8
-RARE       16
-EPIC       35
-LEGENDARY 100
-```
-
-Default weight contribution is `0.5 XP per kg` before the tier multiplier.
-
-Rarity luck changes weighted encounter selection rather than guaranteeing a rarity. COMMON stays at its normal weight; higher rarities receive progressively stronger multipliers, with LEGENDARY receiving the largest benefit from a high-tier rod.
-
-Rod metadata is stored directly on the fishing rod using PDC (`rod_id`, `rod_xp`, `rod_tier`). Rod lore automatically refreshes after catches and shows tier, XP progress, reel multiplier and rarity luck.
+Tier configuration lives in `rod.yml`.
 
 ## Custom fish item providers
-
-Custom visuals remain optional. Every fish keeps its configured Bukkit `material` as a vanilla fallback.
 
 Supported provider modes:
 
@@ -97,15 +135,13 @@ Provider-backed catches retain CdrMoonFishing PDC, so Fish Market, FishDex, stat
 /fishtournament cancel
 ```
 
-Modes: `POINTS`, `TOTAL_WEIGHT`, `BIGGEST`. Tournament participation is automatic on successful catches. Top-3 Vault rewards support pending payout retry when the economy provider is unavailable.
+Modes: `POINTS`, `TOTAL_WEIGHT`, `BIGGEST`.
 
 ## Global leaderboard
 
 ```text
 /fishleaderboard [catches|weight|biggest|legendary] [page]
 ```
-
-Aliases: `/flb`, `/fishlb`.
 
 ## Fish Market
 
@@ -116,8 +152,6 @@ Aliases: `/flb`, `/fishlb`.
 /fishmarket sellall
 /fishmarket featured
 ```
-
-Fish value is calculated from species base price, weight, rarity multiplier, global multiplier and optional Featured Catch multiplier.
 
 ## FishDex & statistics
 
@@ -134,8 +168,6 @@ Player profiles are stored under `plugins/CdrMoonFishing/players/<uuid>.yml`.
 /fishing bait [id|none]
 /fishing givebait <player> <id> [amount]
 ```
-
-Players can also right-click CdrMoonFishing bait items to select them.
 
 ## Requirements
 
@@ -159,12 +191,13 @@ gradle clean build
 Output:
 
 ```text
-build/libs/CdrMoonFishing-0.8.0.jar
+build/libs/CdrMoonFishing-0.9.0.jar
 ```
 
 ## Commands
 
 ```text
+/fishcontracts [reload|reset]
 /fishrod [info|tiers|give]
 /fishtournament [status|top|start|stop|cancel]
 /fishleaderboard [catches|weight|biggest|legendary] [page]
@@ -181,5 +214,6 @@ build/libs/CdrMoonFishing-0.8.0.jar
 
 ## Roadmap
 
-- v0.8.x — rod balancing, rod visuals and progression polish
-- next — Daily/weekly fishing missions or FishDex collection rewards
+- v0.9.5 — FishDex milestones and collection rewards
+- v1.0.0 — production polish, GUI pass, balancing, anti-exploit and config/message cleanup
+- later — rod perks/builds and fishing streak/combo mechanics
