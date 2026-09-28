@@ -59,21 +59,21 @@ public final class MarketAccessManager {
         this.warp = player.getLocation().clone();
         writeWarp(warp);
         save();
-        player.sendMessage(Component.text("Fish Market warp set at your current location.", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("Lokasi Pasar Ikan berhasil diatur di posisi kamu.", NamedTextColor.GREEN));
     }
 
     public void clearWarp(Player player) {
         this.warp = null;
         yaml.set("warp", null);
         save();
-        player.sendMessage(Component.text("Fish Market warp removed.", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Lokasi Pasar Ikan berhasil dihapus.", NamedTextColor.YELLOW));
     }
 
     public boolean teleportToMarket(Player player) {
         if (!hasWarp()) {
-            player.sendMessage(Component.text("Fish Market warp has not been configured yet.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Lokasi Pasar Ikan belum diatur.", NamedTextColor.RED));
             if (player.hasPermission("cdrmoonfishing.admin")) {
-                player.sendMessage(Component.text("Stand near the merchant and use /fishmarket setspawn.", NamedTextColor.GRAY));
+                player.sendMessage(Component.text("Berdiri dekat pedagang lalu gunakan /fishmarket setspawn.", NamedTextColor.GRAY));
             }
             return false;
         }
@@ -83,30 +83,30 @@ public final class MarketAccessManager {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!player.isOnline()) return;
             player.teleport(target);
-            player.sendTitle("§b§lFISH MARKET", "§7Find the Fish Merchant and right-click to sell.", 5, 35, 10);
-            player.sendMessage(Component.text("You arrived at the Fish Market. Right-click the bound merchant NPC to trade.", NamedTextColor.AQUA));
+            player.sendTitle("§b§lPASAR IKAN", "§7Cari Pedagang Ikan lalu klik kanan untuk menjual.", 5, 35, 10);
+            player.sendMessage(Component.text("Kamu tiba di Pasar Ikan. Klik kanan NPC pedagang untuk menjual tangkapan.", NamedTextColor.AQUA));
         });
         return true;
     }
 
     public void beginBind(Player player) {
         if (!citizensAvailable()) {
-            player.sendMessage(Component.text("Citizens is not installed or enabled.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Citizens belum terpasang atau tidak aktif.", NamedTextColor.RED));
             return;
         }
         pendingUnbind.remove(player.getUniqueId());
         pendingBind.add(player.getUniqueId());
-        player.sendMessage(Component.text("Binding mode active. Right-click the Citizens NPC that should open the Fish Market.", NamedTextColor.AQUA));
+        player.sendMessage(Component.text("Mode bind aktif. Klik kanan NPC Citizens yang akan menjadi Pedagang Ikan.", NamedTextColor.AQUA));
     }
 
     public void beginUnbind(Player player) {
         if (!citizensAvailable()) {
-            player.sendMessage(Component.text("Citizens is not installed or enabled.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Citizens belum terpasang atau tidak aktif.", NamedTextColor.RED));
             return;
         }
         pendingBind.remove(player.getUniqueId());
         pendingUnbind.add(player.getUniqueId());
-        player.sendMessage(Component.text("Unbind mode active. Right-click the bound Citizens market NPC.", NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Mode unbind aktif. Klik kanan NPC Pasar Ikan yang sudah terikat.", NamedTextColor.YELLOW));
     }
 
     public boolean handleEntityInteract(Player player, Entity entity) {
@@ -115,22 +115,22 @@ public final class MarketAccessManager {
 
         if (pendingBind.remove(uuid)) {
             if (npcId == null) {
-                player.sendMessage(Component.text("That entity is not a Citizens NPC.", NamedTextColor.RED));
+                player.sendMessage(Component.text("Entity itu bukan NPC Citizens.", NamedTextColor.RED));
                 return true;
             }
             boundNpcIds.add(npcId);
             saveNpcIds();
-            player.sendMessage(Component.text("Bound Citizens NPC #" + npcId + " as a Fish Merchant.", NamedTextColor.GREEN));
+            player.sendMessage(Component.text("NPC Citizens #" + npcId + " berhasil dijadikan Pedagang Ikan.", NamedTextColor.GREEN));
             return true;
         }
 
         if (pendingUnbind.remove(uuid)) {
             if (npcId == null || !boundNpcIds.remove(npcId)) {
-                player.sendMessage(Component.text("That NPC is not bound as a Fish Merchant.", NamedTextColor.RED));
+                player.sendMessage(Component.text("NPC itu tidak terikat sebagai Pedagang Ikan.", NamedTextColor.RED));
                 return true;
             }
             saveNpcIds();
-            player.sendMessage(Component.text("Unbound Citizens NPC #" + npcId + " from the Fish Market.", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("NPC Citizens #" + npcId + " sudah dilepas dari Pasar Ikan.", NamedTextColor.YELLOW));
             return true;
         }
 
