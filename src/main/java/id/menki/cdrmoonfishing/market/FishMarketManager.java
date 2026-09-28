@@ -54,32 +54,30 @@ public final class FishMarketManager {
 
     public void open(Player player) {
         Inventory inventory = Bukkit.createInventory(new FishMarketHolder(), 27,
-                Component.text("Moon Fish Market", NamedTextColor.DARK_AQUA));
+                Component.text("Pasar Ikan Bulan", NamedTextColor.DARK_AQUA));
 
         List<FishDefinition> fish = new ArrayList<>(registry.definitions().values());
         fish.sort(Comparator.comparingInt((FishDefinition value) -> value.rarity().ordinal())
                 .thenComparing(FishDefinition::displayName, String.CASE_INSENSITIVE_ORDER));
-        for (int slot = 0; slot < Math.min(9, fish.size()); slot++) {
-            inventory.setItem(slot, speciesCard(fish.get(slot)));
-        }
+        for (int slot = 0; slot < Math.min(9, fish.size()); slot++) inventory.setItem(slot, speciesCard(fish.get(slot)));
 
         inventory.setItem(SLOT_FEATURED, featuredCard());
         inventory.setItem(SLOT_HELD, heldCard(player));
-        inventory.setItem(SLOT_SELL_HELD, button(Material.EMERALD, "Sell Held Fish", NamedTextColor.GREEN,
-                List.of(Component.text("Sell the custom fish in your main hand.", NamedTextColor.GRAY))));
-        inventory.setItem(SLOT_SELL_ALL, button(Material.CHEST, "Sell All Fish", NamedTextColor.GOLD,
-                List.of(Component.text("Sell all valid CdrMoonFishing fish in storage slots.", NamedTextColor.GRAY))));
-        inventory.setItem(SLOT_CLOSE, button(Material.BARRIER, "Close", NamedTextColor.RED, List.of()));
-        inventory.setItem(25, button(Material.SHIELD, "Market Security", NamedTextColor.AQUA,
-                List.of(Component.text("Unique catch anti-duplicate ledger: ACTIVE", NamedTextColor.GREEN),
-                        Component.text("Redeemed catch IDs: " + soldLedger.size(), NamedTextColor.DARK_GRAY))));
+        inventory.setItem(SLOT_SELL_HELD, button(Material.EMERALD, "Jual Ikan di Tangan", NamedTextColor.GREEN,
+                List.of(Component.text("Jual ikan custom yang sedang kamu pegang.", NamedTextColor.GRAY))));
+        inventory.setItem(SLOT_SELL_ALL, button(Material.CHEST, "Jual Semua Ikan", NamedTextColor.GOLD,
+                List.of(Component.text("Jual semua ikan CdrMoonFishing yang valid di inventory.", NamedTextColor.GRAY))));
+        inventory.setItem(SLOT_CLOSE, button(Material.BARRIER, "Tutup", NamedTextColor.RED, List.of()));
+        inventory.setItem(25, button(Material.SHIELD, "Keamanan Pasar", NamedTextColor.AQUA,
+                List.of(Component.text("Anti-duplikat tangkapan unik: AKTIF", NamedTextColor.GREEN),
+                        Component.text("ID tangkapan terjual: " + soldLedger.size(), NamedTextColor.DARK_GRAY))));
 
         if (!plugin.getConfig().getBoolean("economy.enabled", true)) {
-            inventory.setItem(26, button(Material.REDSTONE_BLOCK, "Market Disabled", NamedTextColor.RED,
-                    List.of(Component.text("economy.enabled is false in config.yml", NamedTextColor.GRAY))));
+            inventory.setItem(26, button(Material.REDSTONE_BLOCK, "Pasar Dinonaktifkan", NamedTextColor.RED,
+                    List.of(Component.text("economy.enabled = false di config.yml", NamedTextColor.GRAY))));
         } else if (!economy.ensureReady()) {
-            inventory.setItem(26, button(Material.REDSTONE_BLOCK, "Vault Economy Offline", NamedTextColor.RED,
-                    List.of(Component.text("Install/configure Vault + an economy provider.", NamedTextColor.GRAY))));
+            inventory.setItem(26, button(Material.REDSTONE_BLOCK, "Ekonomi Vault Offline", NamedTextColor.RED,
+                    List.of(Component.text("Pasang/atur Vault + provider ekonomi.", NamedTextColor.GRAY))));
         }
 
         player.openInventory(inventory);
@@ -91,14 +89,8 @@ public final class FishMarketManager {
 
     public void handleClick(Player player, int rawSlot) {
         switch (rawSlot) {
-            case SLOT_SELL_HELD -> {
-                sellHeld(player);
-                refreshNextTick(player);
-            }
-            case SLOT_SELL_ALL -> {
-                sellAll(player);
-                refreshNextTick(player);
-            }
+            case SLOT_SELL_HELD -> { sellHeld(player); refreshNextTick(player); }
+            case SLOT_SELL_ALL -> { sellAll(player); refreshNextTick(player); }
             case SLOT_CLOSE -> player.closeInventory();
             default -> { }
         }
@@ -107,32 +99,30 @@ public final class FishMarketManager {
     public void sendHeldQuote(Player player) {
         FishQuote quote = quote(player.getInventory().getItemInMainHand());
         if (quote == null) {
-            player.sendMessage(Component.text("Hold a valid CdrMoonFishing fish first.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Pegang ikan CdrMoonFishing yang valid terlebih dahulu.", NamedTextColor.RED));
             return;
         }
         if (!isSellableIdentity(quote)) {
-            player.sendMessage(Component.text("This catch identity is not eligible for sale.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Identitas tangkapan ini tidak dapat dijual.", NamedTextColor.RED));
             return;
         }
-        player.sendMessage(Component.text("Market quote: ", NamedTextColor.AQUA)
+        player.sendMessage(Component.text("Harga pasar: ", NamedTextColor.AQUA)
                 .append(Component.text(quote.fish().displayName(), NamedTextColor.WHITE))
                 .append(Component.text(String.format(Locale.US, " • %.2f kg • ", quote.weight()), NamedTextColor.GRAY))
                 .append(Component.text(economy.format(quote.totalValue()), NamedTextColor.GREEN)));
-        if (quote.featured()) {
-            player.sendMessage(Component.text("Featured Catch bonus is active for this species.", NamedTextColor.GOLD));
-        }
+        if (quote.featured()) player.sendMessage(Component.text("Bonus Tangkapan Unggulan aktif untuk spesies ini.", NamedTextColor.GOLD));
     }
 
     public void sendFeatured(Player player) {
         FishDefinition featured = featuredFish();
         if (featured == null) {
-            player.sendMessage(Component.text("Featured Catch is currently disabled.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Tangkapan Unggulan sedang dinonaktifkan.", NamedTextColor.GRAY));
             return;
         }
         double multiplier = Math.max(1.0, plugin.getConfig().getDouble("economy.market.featured-multiplier", 1.35));
-        player.sendMessage(Component.text("Today's Featured Catch: ", NamedTextColor.GOLD)
+        player.sendMessage(Component.text("Tangkapan Unggulan Hari Ini: ", NamedTextColor.GOLD)
                 .append(Component.text(featured.displayName(), NamedTextColor.YELLOW))
-                .append(Component.text(String.format(Locale.US, " • x%.2f market value", multiplier), NamedTextColor.GRAY)));
+                .append(Component.text(String.format(Locale.US, " • nilai pasar x%.2f", multiplier), NamedTextColor.GRAY)));
     }
 
     public SaleResult sellHeld(Player player) {
@@ -141,14 +131,14 @@ public final class FishMarketManager {
         ItemStack current = player.getInventory().getItemInMainHand();
         FishQuote quote = quote(current);
         if (quote == null) {
-            player.sendMessage(Component.text("The item in your hand is not a sellable custom fish.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Item di tanganmu bukan ikan custom yang dapat dijual.", NamedTextColor.RED));
             return new SaleResult(false, 0, 0.0);
         }
         if (!validateSaleIdentity(player, quote)) return new SaleResult(false, 0, 0.0);
 
         String reservedUid = quote.catchUid();
         if (reservedUid != null && !soldLedger.markSold(reservedUid)) {
-            player.sendMessage(Component.text("Sale blocked: catch identity could not be reserved or was already redeemed.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Penjualan diblokir: ID tangkapan gagal diamankan atau sudah pernah dijual.", NamedTextColor.RED));
             return new SaleResult(false, 0, 0.0);
         }
 
@@ -158,7 +148,7 @@ public final class FishMarketManager {
         if (!deposit.success()) {
             if (reservedUid != null) soldLedger.unmarkSold(reservedUid);
             restoreItem(player, backup);
-            player.sendMessage(Component.text("Sale failed: " + deposit.error(), NamedTextColor.RED));
+            player.sendMessage(Component.text("Penjualan gagal: " + deposit.error(), NamedTextColor.RED));
             return new SaleResult(false, 0, 0.0);
         }
 
@@ -182,14 +172,8 @@ public final class FishMarketManager {
             ItemStack item = storage[slot];
             FishQuote quote = quote(item);
             if (quote == null) continue;
-            if (!isSellableIdentity(quote)) {
-                rejected++;
-                continue;
-            }
-            if (quote.catchUid() != null && !seenInBatch.add(quote.catchUid())) {
-                rejected++;
-                continue;
-            }
+            if (!isSellableIdentity(quote)) { rejected++; continue; }
+            if (quote.catchUid() != null && !seenInBatch.add(quote.catchUid())) { rejected++; continue; }
             slots.add(slot);
             backups.add(item.clone());
             identities.add(quote.catchUid());
@@ -199,8 +183,8 @@ public final class FishMarketManager {
 
         total = roundMoney(total);
         if (slots.isEmpty() || total <= 0.0) {
-            player.sendMessage(Component.text("No eligible custom fish found in your inventory.", NamedTextColor.RED));
-            if (rejected > 0) player.sendMessage(Component.text(rejected + " fish stack(s) rejected by market security.", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Tidak ada ikan custom yang memenuhi syarat jual di inventory.", NamedTextColor.RED));
+            if (rejected > 0) player.sendMessage(Component.text(rejected + " stack ikan ditolak oleh keamanan pasar.", NamedTextColor.YELLOW));
             return new SaleResult(false, 0, 0.0);
         }
 
@@ -209,7 +193,7 @@ public final class FishMarketManager {
             if (uid == null) continue;
             if (!soldLedger.markSold(uid)) {
                 for (String rollback : reserved) soldLedger.unmarkSold(rollback);
-                player.sendMessage(Component.text("Sale blocked: one catch identity was already redeemed or ledger persistence failed.", NamedTextColor.RED));
+                player.sendMessage(Component.text("Penjualan diblokir: ada ID tangkapan yang sudah dijual atau ledger gagal disimpan.", NamedTextColor.RED));
                 return new SaleResult(false, 0, 0.0);
             }
             reserved.add(uid);
@@ -225,14 +209,12 @@ public final class FishMarketManager {
                 if (player.getInventory().getItem(slot) == null) player.getInventory().setItem(slot, backup);
                 else restoreItem(player, backup);
             }
-            player.sendMessage(Component.text("Sale failed: " + deposit.error(), NamedTextColor.RED));
+            player.sendMessage(Component.text("Penjualan gagal: " + deposit.error(), NamedTextColor.RED));
             return new SaleResult(false, 0, 0.0);
         }
 
         saleMessage(player, count, total);
-        if (rejected > 0) {
-            player.sendMessage(Component.text(rejected + " fish stack(s) were skipped by market security.", NamedTextColor.YELLOW));
-        }
+        if (rejected > 0) player.sendMessage(Component.text(rejected + " stack ikan dilewati oleh keamanan pasar.", NamedTextColor.YELLOW));
         return new SaleResult(true, count, total);
     }
 
@@ -273,28 +255,23 @@ public final class FishMarketManager {
         return fish.get(index);
     }
 
-    public int redeemedCatchCount() {
-        return soldLedger.size();
-    }
-
-    public void reloadSecurityLedger() {
-        soldLedger.reload();
-    }
+    public int redeemedCatchCount() { return soldLedger.size(); }
+    public void reloadSecurityLedger() { soldLedger.reload(); }
 
     private boolean validateSaleIdentity(Player player, FishQuote quote) {
         if (quote.catchUid() == null) {
             if (plugin.getConfig().getBoolean("security.market.require-catch-uid", false)) {
-                player.sendMessage(Component.text("Legacy fish without a v1.0 catch identity cannot be sold on this server.", NamedTextColor.RED));
+                player.sendMessage(Component.text("Ikan lama tanpa identitas tangkapan v1.0 tidak dapat dijual di server ini.", NamedTextColor.RED));
                 return false;
             }
             return true;
         }
         if (quote.amount() != 1) {
-            player.sendMessage(Component.text("Sale blocked: identified catches cannot be stacked.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Penjualan diblokir: tangkapan ber-ID tidak boleh ditumpuk.", NamedTextColor.RED));
             return false;
         }
         if (soldLedger.isSold(quote.catchUid())) {
-            player.sendMessage(Component.text("Sale blocked: this catch identity has already been redeemed.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Penjualan diblokir: identitas tangkapan ini sudah pernah dijual.", NamedTextColor.RED));
             return false;
         }
         return true;
@@ -334,11 +311,11 @@ public final class FishMarketManager {
 
     private boolean marketReady(Player player) {
         if (!plugin.getConfig().getBoolean("economy.enabled", true)) {
-            player.sendMessage(Component.text("Fish Market is disabled by server configuration.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Pasar Ikan dinonaktifkan oleh konfigurasi server.", NamedTextColor.RED));
             return false;
         }
         if (!economy.ensureReady()) {
-            player.sendMessage(Component.text("Vault economy provider is not available.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Provider ekonomi Vault tidak tersedia.", NamedTextColor.RED));
             return false;
         }
         return true;
@@ -348,41 +325,39 @@ public final class FishMarketManager {
         boolean featured = isFeatured(fish);
         double oneKg = price(fish, 1.0, 1, featured);
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("Base: " + economy.format(fish.basePricePerKg()) + " / kg", NamedTextColor.GRAY));
-        lore.add(Component.text("Current 1 kg value: " + economy.format(oneKg), NamedTextColor.GREEN));
-        lore.add(Component.text("Rarity: " + fish.rarity().name(), NamedTextColor.DARK_GRAY));
-        if (featured) lore.add(Component.text("★ FEATURED CATCH TODAY", NamedTextColor.GOLD));
+        lore.add(Component.text("Dasar: " + economy.format(fish.basePricePerKg()) + " / kg", NamedTextColor.GRAY));
+        lore.add(Component.text("Nilai 1 kg saat ini: " + economy.format(oneKg), NamedTextColor.GREEN));
+        lore.add(Component.text("Kelangkaan: " + fish.rarity().displayName(), NamedTextColor.DARK_GRAY));
+        if (featured) lore.add(Component.text("★ TANGKAPAN UNGGULAN HARI INI", NamedTextColor.GOLD));
         return button(fish.material(), fish.displayName(), featured ? NamedTextColor.GOLD : NamedTextColor.AQUA, lore);
     }
 
     private ItemStack featuredCard() {
         FishDefinition featured = featuredFish();
         if (featured == null) {
-            return button(Material.CLOCK, "Featured Catch", NamedTextColor.GRAY,
-                    List.of(Component.text("Daily feature is disabled.", NamedTextColor.DARK_GRAY)));
+            return button(Material.CLOCK, "Tangkapan Unggulan", NamedTextColor.GRAY,
+                    List.of(Component.text("Fitur unggulan harian dinonaktifkan.", NamedTextColor.DARK_GRAY)));
         }
         double multiplier = Math.max(1.0, plugin.getConfig().getDouble("economy.market.featured-multiplier", 1.35));
-        return button(Material.CLOCK, "Featured: " + featured.displayName(), NamedTextColor.GOLD,
-                List.of(Component.text(String.format(Locale.US, "Today's bonus: x%.2f", multiplier), NamedTextColor.YELLOW),
-                        Component.text("Rotates daily.", NamedTextColor.GRAY)));
+        return button(Material.CLOCK, "Unggulan: " + featured.displayName(), NamedTextColor.GOLD,
+                List.of(Component.text(String.format(Locale.US, "Bonus hari ini: x%.2f", multiplier), NamedTextColor.YELLOW),
+                        Component.text("Berganti setiap hari.", NamedTextColor.GRAY)));
     }
 
     private ItemStack heldCard(Player player) {
         FishQuote quote = quote(player.getInventory().getItemInMainHand());
         if (quote == null) {
-            return button(Material.BOOK, "Held Fish Quote", NamedTextColor.AQUA,
-                    List.of(Component.text("Hold a custom fish to see its price.", NamedTextColor.GRAY)));
+            return button(Material.BOOK, "Harga Ikan di Tangan", NamedTextColor.AQUA,
+                    List.of(Component.text("Pegang ikan custom untuk melihat harganya.", NamedTextColor.GRAY)));
         }
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text(String.format(Locale.US, "Weight: %.2f kg", quote.weight()), NamedTextColor.GRAY));
-        lore.add(Component.text("Value: " + economy.format(quote.totalValue()), NamedTextColor.GREEN));
-        if (quote.featured()) lore.add(Component.text("★ Featured Catch bonus applied", NamedTextColor.GOLD));
+        lore.add(Component.text(String.format(Locale.US, "Berat: %.2f kg", quote.weight()), NamedTextColor.GRAY));
+        lore.add(Component.text("Nilai: " + economy.format(quote.totalValue()), NamedTextColor.GREEN));
+        if (quote.featured()) lore.add(Component.text("★ Bonus Tangkapan Unggulan diterapkan", NamedTextColor.GOLD));
         if (quote.catchUid() != null) {
-            lore.add(Component.text(soldLedger.isSold(quote.catchUid()) ? "Identity: REDEEMED" : "Identity: VALID",
+            lore.add(Component.text(soldLedger.isSold(quote.catchUid()) ? "Identitas: SUDAH DIJUAL" : "Identitas: VALID",
                     soldLedger.isSold(quote.catchUid()) ? NamedTextColor.RED : NamedTextColor.GREEN));
-        } else {
-            lore.add(Component.text("Identity: LEGACY", NamedTextColor.YELLOW));
-        }
+        } else lore.add(Component.text("Identitas: LEGACY", NamedTextColor.YELLOW));
         return button(quote.fish().material(), quote.fish().displayName(), NamedTextColor.AQUA, lore);
     }
 
@@ -396,7 +371,7 @@ public final class FishMarketManager {
     }
 
     private void saleMessage(Player player, int amount, double total) {
-        player.sendMessage(Component.text("Sold " + amount + " fish for ", NamedTextColor.GRAY)
+        player.sendMessage(Component.text("Berhasil menjual " + amount + " ikan seharga ", NamedTextColor.GRAY)
                 .append(Component.text(economy.format(total), NamedTextColor.GREEN)));
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.8f, 1.25f);
     }
@@ -412,9 +387,7 @@ public final class FishMarketManager {
         });
     }
 
-    private double roundMoney(double value) {
-        return Math.round(value * 100.0) / 100.0;
-    }
+    private double roundMoney(double value) { return Math.round(value * 100.0) / 100.0; }
 
     public record FishQuote(FishDefinition fish, double weight, int amount, double totalValue,
                             boolean featured, String catchUid) {}
