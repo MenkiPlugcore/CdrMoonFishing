@@ -21,35 +21,29 @@ public final class BaitManager {
 
     public boolean trySelect(Player player, ItemStack item) {
         BaitDefinition bait = registry.identify(item);
-        if (bait == null) {
-            return false;
-        }
+        if (bait == null) return false;
         selected.put(player.getUniqueId(), bait.id());
-        player.sendActionBar(Component.text("Selected bait: ", NamedTextColor.GRAY)
+        player.sendActionBar(Component.text("Umpan dipilih: ", NamedTextColor.GRAY)
                 .append(Component.text(bait.displayName(), NamedTextColor.GOLD))
-                .append(Component.text(" (" + registry.count(player, bait) + " available)", NamedTextColor.DARK_GRAY)));
+                .append(Component.text(" (tersedia " + registry.count(player, bait) + ")", NamedTextColor.DARK_GRAY)));
         return true;
     }
 
     public boolean select(Player player, String id) {
         BaitDefinition bait = registry.get(id);
-        if (bait == null || registry.count(player, bait) <= 0) {
-            return false;
-        }
+        if (bait == null || registry.count(player, bait) <= 0) return false;
         selected.put(player.getUniqueId(), bait.id());
         return true;
     }
 
     public BaitDefinition resolveSelected(Player player) {
         String id = selected.get(player.getUniqueId());
-        if (id == null) {
-            return null;
-        }
+        if (id == null) return null;
 
         BaitDefinition bait = registry.get(id);
         if (bait == null || registry.count(player, bait) <= 0) {
             selected.remove(player.getUniqueId());
-            player.sendActionBar(Component.text("Selected bait is out of stock. Fishing without bait.", NamedTextColor.YELLOW));
+            player.sendActionBar(Component.text("Umpan yang dipilih sudah habis. Memancing tanpa umpan.", NamedTextColor.YELLOW));
             return null;
         }
         return bait;
