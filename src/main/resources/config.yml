@@ -1,5 +1,5 @@
-# CdrMoonFishing v0.5.0
-# Crossplay-first: gameplay and market UI use normal server-side interactions.
+# CdrMoonFishing v0.6.0
+# Crossplay-first: gameplay, market and tournament feedback stay server-side.
 
 minigame:
   tick-period: 5
@@ -41,6 +41,21 @@ economy:
     featured-enabled: true
     featured-multiplier: 1.35
     timezone: "Asia/Jakarta"
+
+tournament:
+  points:
+    weight-multiplier: 0.25
+    rarity:
+      COMMON: 1.0
+      UNCOMMON: 3.0
+      RARE: 8.0
+      EPIC: 20.0
+      LEGENDARY: 60.0
+  rewards:
+    enabled: true
+    first: 5000.0
+    second: 2500.0
+    third: 1000.0
 
 messages:
   bite-common: "Something is biting..."
