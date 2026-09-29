@@ -1,4 +1,4 @@
-# CdrMoonFishing v1.0.6 Kontrak Memancing Harian
+# CdrMoonFishing v1.0.8 Kontrak Memancing Harian
 # Tiga kontrak dipilih secara deterministik setiap hari.
 
 settings:
@@ -15,7 +15,6 @@ contracts:
       min-rarity: RARE
     rewards:
       money: 750.0
-      rod-xp: 30
 
   heavy_haul:
     display-name: "Tangkapan Berat"
@@ -25,7 +24,6 @@ contracts:
     conditions: {}
     rewards:
       money: 900.0
-      rod-xp: 25
 
   moon_koi_night:
     display-name: "Koi di Bawah Bulan"
@@ -40,7 +38,6 @@ contracts:
       bait:
         id: "moon_worm"
         amount: 2
-      rod-xp: 40
 
   shrimp_specialist:
     display-name: "Spesialis Umpan Udang"
@@ -54,7 +51,6 @@ contracts:
       bait:
         id: "glow_worm"
         amount: 2
-      rod-xp: 20
 
   deep_water_hunt:
     display-name: "Perburuan Laut Dalam"
@@ -65,7 +61,6 @@ contracts:
       min-depth: 20
     rewards:
       money: 850.0
-      rod-xp: 35
 
   storm_fisher:
     display-name: "Pemancing Badai"
@@ -79,4 +74,3 @@ contracts:
       bait:
         id: "ancient_bait"
         amount: 1
-      rod-xp: 45
