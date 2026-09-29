@@ -1,7 +1,9 @@
 package id.menki.cdrmoonfishing.listener;
 
+import id.menki.cdrmoonfishing.CdrMoonFishing;
 import id.menki.cdrmoonfishing.bait.BaitManager;
 import id.menki.cdrmoonfishing.fishing.FishingManager;
+import id.menki.cdrmoonfishing.rod.RodManager;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
@@ -13,14 +15,17 @@ import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public final class FishingListener implements Listener {
     private final FishingManager fishingManager;
     private final BaitManager baitManager;
+    private final RodManager rodManager;
 
     public FishingListener(FishingManager fishingManager, BaitManager baitManager) {
         this.fishingManager = fishingManager;
         this.baitManager = baitManager;
+        this.rodManager = JavaPlugin.getPlugin(CdrMoonFishing.class).getRodManager();
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -31,6 +36,7 @@ public final class FishingListener implements Listener {
         }
 
         switch (event.getState()) {
+            case FISHING -> rodManager.applyBiteSpeed(event.getPlayer(), event.getHook());
             case BITE -> fishingManager.prepareEncounter(event.getPlayer(), event.getHook().getLocation());
             case CAUGHT_FISH -> {
                 event.setCancelled(true);
