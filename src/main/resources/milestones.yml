@@ -1,4 +1,4 @@
-# CdrMoonFishing v1.0.6
+# CdrMoonFishing v1.0.8
 # Hadiah milestone FishDex.
 # Luck Koleksi bersifat permanen per-player setelah milestone tercapai.
 # Bonus ini ditumpuk dengan luck joran, tetapi tidak melewati syarat ikan
@@ -13,7 +13,6 @@ milestones:
       money: 500.0
       bait-id: shrimp
       bait-amount: 3
-      rod-xp: 25
       collection-luck: 0.01
 
   collection_50:
@@ -24,7 +23,6 @@ milestones:
       money: 1500.0
       bait-id: glow_worm
       bait-amount: 2
-      rod-xp: 50
       collection-luck: 0.02
 
   collection_75:
@@ -35,7 +33,6 @@ milestones:
       money: 3000.0
       bait-id: moon_worm
       bait-amount: 2
-      rod-xp: 100
       collection-luck: 0.03
 
   collection_100:
@@ -46,7 +43,6 @@ milestones:
       money: 7500.0
       bait-id: ancient_bait
       bait-amount: 2
-      rod-xp: 250
       collection-luck: 0.06
 
   first_legendary:
@@ -56,7 +52,6 @@ milestones:
       money: 2500.0
       bait-id: ancient_bait
       bait-amount: 1
-      rod-xp: 150
       collection-luck: 0.03
 
 # Contoh katalog untuk pengembangan berikutnya:
@@ -66,5 +61,4 @@ milestones:
 #    rarity: RARE
 #    reward:
 #      money: 2000.0
-#      rod-xp: 75
 #      collection-luck: 0.02
