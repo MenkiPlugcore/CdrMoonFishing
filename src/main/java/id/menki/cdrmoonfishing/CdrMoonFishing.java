@@ -11,6 +11,7 @@ import id.menki.cdrmoonfishing.command.FishRodCommand;
 import id.menki.cdrmoonfishing.command.FishTournamentCommand;
 import id.menki.cdrmoonfishing.command.FishingCommand;
 import id.menki.cdrmoonfishing.command.FishingHubCommand;
+import id.menki.cdrmoonfishing.config.FishContentMigration;
 import id.menki.cdrmoonfishing.config.IndonesianLocalizationMigration;
 import id.menki.cdrmoonfishing.contracts.ContractManager;
 import id.menki.cdrmoonfishing.economy.VaultEconomyHook;
@@ -18,8 +19,10 @@ import id.menki.cdrmoonfishing.fishing.FishingManager;
 import id.menki.cdrmoonfishing.integration.IntegrationManager;
 import id.menki.cdrmoonfishing.item.CatchIdentityManager;
 import id.menki.cdrmoonfishing.item.CatchItemUpgradeManager;
+import id.menki.cdrmoonfishing.item.CatchSizeManager;
 import id.menki.cdrmoonfishing.item.FishItemProviderManager;
 import id.menki.cdrmoonfishing.leaderboard.GlobalLeaderboardManager;
+import id.menki.cdrmoonfishing.listener.FishCookingListener;
 import id.menki.cdrmoonfishing.listener.FishMarketListener;
 import id.menki.cdrmoonfishing.listener.FishingListener;
 import id.menki.cdrmoonfishing.listener.FishingUiListener;
@@ -57,6 +60,7 @@ public final class CdrMoonFishing extends JavaPlugin {
     private FishItemProviderManager fishItemProviderManager;
     private CatchIdentityManager catchIdentityManager;
     private CatchItemUpgradeManager catchItemUpgradeManager;
+    private CatchSizeManager catchSizeManager;
     private FishingUiManager fishingUiManager;
     private FishingActionBarRenderer actionBarRenderer;
 
@@ -70,6 +74,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         saveResource("rod.yml", false);
         saveResource("contracts.yml", false);
         saveResource("milestones.yml", false);
+        FishContentMigration.apply(this);
         IndonesianLocalizationMigration.apply(this);
 
         this.fishRegistry = new FishRegistry(this);
@@ -94,6 +99,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         this.fishItemProviderManager = new FishItemProviderManager(this);
         this.catchIdentityManager = new CatchIdentityManager(this);
         this.catchItemUpgradeManager = new CatchItemUpgradeManager(this, fishItemProviderManager);
+        this.catchSizeManager = new CatchSizeManager(this);
 
         this.tournamentManager = new TournamentManager(this, economyHook);
         this.playerStatsManager.registerCatchObserver(tournamentManager::recordCatch);
@@ -101,6 +107,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         this.playerStatsManager.registerCatchObserver(milestoneManager::recordCatch);
         this.playerStatsManager.registerCatchObserver(catchIdentityManager);
         this.playerStatsManager.registerCatchObserver(catchItemUpgradeManager);
+        this.playerStatsManager.registerCatchObserver(catchSizeManager);
         this.globalLeaderboardManager = new GlobalLeaderboardManager(this);
 
         this.fishingManager = new FishingManager(this, fishRegistry, baitManager, playerStatsManager, rodManager, contractManager);
@@ -110,6 +117,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         this.actionBarRenderer = new FishingActionBarRenderer(this);
         this.actionBarRenderer.start();
         getServer().getPluginManager().registerEvents(new FishingListener(fishingManager, baitManager), this);
+        getServer().getPluginManager().registerEvents(new FishCookingListener(this, fishRegistry), this);
         getServer().getPluginManager().registerEvents(new FishMarketListener(fishMarketManager), this);
         getServer().getPluginManager().registerEvents(new FishingUiListener(fishingUiManager, marketAccessManager), this);
         getServer().getPluginManager().registerEvents(new MarketNpcListener(marketAccessManager), this);
@@ -181,6 +189,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         getLogger().info("CdrMoonFishing v" + getPluginMeta().getVersion() + " enabled.");
         getLogger().info("Player language: Bahasa Indonesia.");
         getLogger().info("Lane-style fishing HUD: enabled.");
+        getLogger().info("Fish size classes + cooking: enabled.");
         getLogger().info("Fish Market access: warp=" + (marketAccessManager.hasWarp() ? "SET" : "NOT_SET")
                 + " | Citizens=" + (marketAccessManager.citizensAvailable() ? "READY" : "OFFLINE")
                 + " | bound merchants=" + marketAccessManager.boundNpcIds().size());
@@ -199,6 +208,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         reloadConfig();
         getConfig().options().copyDefaults(true);
         saveConfig();
+        FishContentMigration.apply(this);
         IndonesianLocalizationMigration.apply(this);
         fishRegistry.reload();
         baitRegistry.reload();
