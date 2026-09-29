@@ -1,5 +1,8 @@
 # Registry ikan CdrMoonFishing
 #
+# v1.1.0 membawa 25 spesies default. Instalasi lama akan menerima spesies baru
+# secara aman tanpa menimpa konfigurasi ikan yang sudah pernah diedit owner.
+#
 # Provider item custom bersifat opsional. `material` selalu menjadi fallback vanilla yang aman.
 # Tambahkan blok ini pada ikan ketika asetnya sudah siap:
 #
@@ -14,16 +17,17 @@
 # AUTO mencoba ItemsAdder, lalu MMOItems, lalu kembali ke `material`.
 
 fish:
+  # ==================== COMMON ====================
   river_carp:
     display-name: "Ikan Mas Sungai"
     material: COD
     rarity: COMMON
     behavior: CALM
-    chance: 55.0
+    chance: 35.0
     min-weight: 0.8
     max-weight: 4.5
     min-depth: 1
-    max-depth: 64
+    max-depth: 18
     pull-min: 0.4
     pull-max: 1.2
     base-price-per-kg: 12.0
@@ -32,16 +36,107 @@ fish:
     time: ["ANY"]
     required-baits: []
 
+  coastal_sardine:
+    display-name: "Sarden Pesisir"
+    material: COD
+    rarity: COMMON
+    behavior: CALM
+    chance: 42.0
+    min-weight: 0.10
+    max-weight: 0.80
+    min-depth: 1
+    max-depth: 12
+    pull-min: 0.25
+    pull-max: 0.75
+    base-price-per-kg: 15.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["ANY"]
+    required-baits: []
+
+  silver_anchovy:
+    display-name: "Teri Perak"
+    material: COD
+    rarity: COMMON
+    behavior: ERRATIC
+    chance: 38.0
+    min-weight: 0.08
+    max-weight: 0.60
+    min-depth: 1
+    max-depth: 14
+    pull-min: 0.30
+    pull-max: 0.90
+    base-price-per-kg: 17.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["ANY"]
+    required-baits: []
+
+  mud_goby:
+    display-name: "Gobi Lumpur"
+    material: COD
+    rarity: COMMON
+    behavior: CALM
+    chance: 28.0
+    min-weight: 0.20
+    max-weight: 1.50
+    min-depth: 1
+    max-depth: 8
+    pull-min: 0.30
+    pull-max: 1.00
+    base-price-per-kg: 14.0
+    biomes: ["*"]
+    weather: ["RAIN", "THUNDER"]
+    time: ["ANY"]
+    required-baits: []
+
+  reef_clownfish:
+    display-name: "Ikan Badut Karang"
+    material: TROPICAL_FISH
+    rarity: COMMON
+    behavior: ERRATIC
+    chance: 26.0
+    min-weight: 0.15
+    max-weight: 1.00
+    min-depth: 1
+    max-depth: 10
+    pull-min: 0.35
+    pull-max: 1.05
+    base-price-per-kg: 18.0
+    biomes: ["*"]
+    weather: ["CLEAR"]
+    time: ["DAY"]
+    required-baits: []
+
+  shallow_mackerel:
+    display-name: "Makarel Dangkal"
+    material: COD
+    rarity: COMMON
+    behavior: ERRATIC
+    chance: 30.0
+    min-weight: 0.50
+    max-weight: 2.80
+    min-depth: 2
+    max-depth: 18
+    pull-min: 0.45
+    pull-max: 1.30
+    base-price-per-kg: 16.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["ANY"]
+    required-baits: []
+
+  # ==================== UNCOMMON ====================
   silver_salmon:
     display-name: "Salmon Perak"
     material: SALMON
     rarity: UNCOMMON
     behavior: ERRATIC
-    chance: 28.0
+    chance: 22.0
     min-weight: 1.2
     max-weight: 6.8
     min-depth: 2
-    max-depth: 64
+    max-depth: 40
     pull-min: 0.8
     pull-max: 1.8
     base-price-per-kg: 18.0
@@ -50,12 +145,103 @@ fish:
     time: ["ANY"]
     required-baits: []
 
+  rock_grouper:
+    display-name: "Kerapu Batu"
+    material: COD
+    rarity: UNCOMMON
+    behavior: CALM
+    chance: 18.0
+    min-weight: 2.0
+    max-weight: 9.0
+    min-depth: 8
+    max-depth: 30
+    pull-min: 0.75
+    pull-max: 1.75
+    base-price-per-kg: 22.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["ANY"]
+    required-baits: []
+
+  flying_fish:
+    display-name: "Ikan Terbang"
+    material: TROPICAL_FISH
+    rarity: UNCOMMON
+    behavior: ERRATIC
+    chance: 16.0
+    min-weight: 0.5
+    max-weight: 2.5
+    min-depth: 1
+    max-depth: 8
+    pull-min: 0.75
+    pull-max: 1.70
+    base-price-per-kg: 26.0
+    biomes: ["*"]
+    weather: ["CLEAR"]
+    time: ["DAY"]
+    required-baits: []
+
+  red_snapper:
+    display-name: "Kakap Merah"
+    material: SALMON
+    rarity: UNCOMMON
+    behavior: AGGRESSIVE
+    chance: 17.0
+    min-weight: 1.5
+    max-weight: 8.0
+    min-depth: 6
+    max-depth: 28
+    pull-min: 0.9
+    pull-max: 2.0
+    base-price-per-kg: 25.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["DAY"]
+    required-baits: []
+
+  lantern_sprat:
+    display-name: "Sprat Lentera"
+    material: TROPICAL_FISH
+    rarity: UNCOMMON
+    behavior: ERRATIC
+    chance: 14.0
+    min-weight: 0.4
+    max-weight: 2.0
+    min-depth: 12
+    max-depth: 35
+    pull-min: 0.8
+    pull-max: 1.8
+    base-price-per-kg: 30.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["NIGHT"]
+    required-baits: []
+
+  bluefin_mackerel:
+    display-name: "Makarel Sirip Biru"
+    material: COD
+    rarity: UNCOMMON
+    behavior: AGGRESSIVE
+    chance: 15.0
+    min-weight: 2.0
+    max-weight: 10.0
+    min-depth: 5
+    max-depth: 35
+    pull-min: 1.0
+    pull-max: 2.1
+    base-price-per-kg: 24.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["ANY"]
+    required-baits: []
+
+  # ==================== RARE ====================
   moon_koi:
     display-name: "Koi Bulan"
     material: TROPICAL_FISH
     rarity: RARE
     behavior: ERRATIC
-    chance: 12.0
+    chance: 8.0
     min-weight: 1.5
     max-weight: 8.5
     min-depth: 4
@@ -93,12 +279,103 @@ fish:
         subtitle: "§fKoi Bulan mulai melawan!"
         sound: ENTITY_FISHING_BOBBER_SPLASH
 
+  crystal_ray:
+    display-name: "Pari Kristal"
+    material: TROPICAL_FISH
+    rarity: RARE
+    behavior: DIVING
+    chance: 6.0
+    min-weight: 4.0
+    max-weight: 20.0
+    min-depth: 12
+    max-depth: 45
+    pull-min: 1.1
+    pull-max: 2.6
+    base-price-per-kg: 58.0
+    biomes: ["*"]
+    weather: ["CLEAR"]
+    time: ["ANY"]
+    required-baits: []
+
+  ghost_tuna:
+    display-name: "Tuna Hantu"
+    material: COD
+    rarity: RARE
+    behavior: ERRATIC
+    chance: 5.0
+    min-weight: 3.0
+    max-weight: 18.0
+    min-depth: 15
+    max-depth: 50
+    pull-min: 1.2
+    pull-max: 2.8
+    base-price-per-kg: 62.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["NIGHT"]
+    required-baits: []
+
+  coral_barracuda:
+    display-name: "Barracuda Karang"
+    material: SALMON
+    rarity: RARE
+    behavior: AGGRESSIVE
+    chance: 7.0
+    min-weight: 2.0
+    max-weight: 14.0
+    min-depth: 4
+    max-depth: 25
+    pull-min: 1.3
+    pull-max: 3.0
+    base-price-per-kg: 54.0
+    biomes: ["*"]
+    weather: ["CLEAR"]
+    time: ["DAY"]
+    required-baits: []
+
+  storm_marlin:
+    display-name: "Marlin Badai"
+    material: SALMON
+    rarity: RARE
+    behavior: AGGRESSIVE
+    chance: 4.0
+    min-weight: 8.0
+    max-weight: 35.0
+    min-depth: 10
+    max-depth: 50
+    pull-min: 1.6
+    pull-max: 3.4
+    base-price-per-kg: 68.0
+    biomes: ["*"]
+    weather: ["RAIN", "THUNDER"]
+    time: ["ANY"]
+    required-baits: []
+
+  dusk_angler:
+    display-name: "Angler Senja"
+    material: PUFFERFISH
+    rarity: RARE
+    behavior: DIVING
+    chance: 5.0
+    min-weight: 1.0
+    max-weight: 8.0
+    min-depth: 20
+    max-depth: 60
+    pull-min: 1.2
+    pull-max: 2.8
+    base-price-per-kg: 72.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["NIGHT"]
+    required-baits: []
+
+  # ==================== EPIC ====================
   abyss_eel:
     display-name: "Belut Jurang"
     material: PUFFERFISH
     rarity: EPIC
     behavior: DIVING
-    chance: 4.5
+    chance: 3.0
     min-weight: 4.0
     max-weight: 18.0
     min-depth: 20
@@ -148,6 +425,61 @@ fish:
         subtitle: "§7Jangan sampai senarnya putus!"
         sound: ENTITY_ENDER_DRAGON_GROWL
 
+  void_manta:
+    display-name: "Manta Void"
+    material: TROPICAL_FISH
+    rarity: EPIC
+    behavior: DIVING
+    chance: 2.0
+    min-weight: 12.0
+    max-weight: 55.0
+    min-depth: 25
+    max-depth: 64
+    pull-min: 1.7
+    pull-max: 3.7
+    base-price-per-kg: 105.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["NIGHT"]
+    required-baits: []
+
+  tempest_swordfish:
+    display-name: "Ikan Pedang Tempest"
+    material: SALMON
+    rarity: EPIC
+    behavior: AGGRESSIVE
+    chance: 1.8
+    min-weight: 15.0
+    max-weight: 65.0
+    min-depth: 15
+    max-depth: 60
+    pull-min: 2.0
+    pull-max: 4.0
+    base-price-per-kg: 115.0
+    biomes: ["*"]
+    weather: ["THUNDER"]
+    time: ["ANY"]
+    required-baits: []
+
+  abyss_angler:
+    display-name: "Angler Abyssal"
+    material: PUFFERFISH
+    rarity: EPIC
+    behavior: DIVING
+    chance: 2.3
+    min-weight: 5.0
+    max-weight: 25.0
+    min-depth: 30
+    max-depth: 64
+    pull-min: 1.8
+    pull-max: 3.8
+    base-price-per-kg: 110.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["NIGHT"]
+    required-baits: []
+
+  # ==================== LEGENDARY ====================
   lunar_leviathan:
     display-name: "Leviathan Lunar"
     material: TROPICAL_FISH
@@ -202,3 +534,39 @@ fish:
         title: "§4§lPERLAWANAN TERAKHIR"
         subtitle: "§cFASE III §7- Bertahan dari serangan terakhir!"
         sound: ENTITY_ENDER_DRAGON_GROWL
+
+  ancient_coelacanth:
+    display-name: "Coelacanth Purba"
+    material: COD
+    rarity: LEGENDARY
+    behavior: CALM
+    chance: 0.18
+    min-weight: 18.0
+    max-weight: 75.0
+    min-depth: 35
+    max-depth: 64
+    pull-min: 1.4
+    pull-max: 3.6
+    base-price-per-kg: 340.0
+    biomes: ["*"]
+    weather: ["ANY"]
+    time: ["NIGHT"]
+    required-baits: []
+
+  tide_serpent:
+    display-name: "Serpent Pasang"
+    material: PUFFERFISH
+    rarity: LEGENDARY
+    behavior: AGGRESSIVE
+    chance: 0.12
+    min-weight: 30.0
+    max-weight: 110.0
+    min-depth: 25
+    max-depth: 64
+    pull-min: 2.1
+    pull-max: 4.8
+    base-price-per-kg: 390.0
+    biomes: ["*"]
+    weather: ["THUNDER"]
+    time: ["NIGHT"]
+    required-baits: ["ancient_bait"]
