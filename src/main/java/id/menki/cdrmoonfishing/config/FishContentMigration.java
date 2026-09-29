@@ -43,6 +43,7 @@ public final class FishContentMigration {
 
             live.createSection(basePath);
             for (Map.Entry<String, Object> entry : source.getValues(true).entrySet()) {
+                if (entry.getValue() instanceof ConfigurationSection) continue;
                 live.set(basePath + "." + entry.getKey(), entry.getValue());
             }
             added++;
