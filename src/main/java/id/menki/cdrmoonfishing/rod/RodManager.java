@@ -11,6 +11,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.FishHook;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -32,8 +33,8 @@ import java.util.function.ToDoubleFunction;
  * Tier-based fishing rod manager.
  *
  * Rod XP was removed in v1.0.8. v1.0.9 maps every tier to a native 1.21.11
- * minecraft:item_model entry (cdrmoonfishing:rod/<tier>) so custom visuals do
- * not consume or collide with numeric CustomModelData used by other plugins.
+ * minecraft:item_model entry. v1.0.10 adds tier-based bite speed by adjusting
+ * the native FishHook wait/lure windows while keeping the vanilla hook itself.
  */
 public final class RodManager implements Listener {
     private static final int HUB_ROD_SLOT = 11;
@@ -108,6 +109,30 @@ public final class RodManager implements Listener {
         return tier == null ? 1.0 : tier.reelMultiplier();
     }
 
+    /**
+     * Applies custom bite speed to the native Paper FishHook.
+     * Both the initial wait window and the fish-approach/lure window are scaled,
+     * so stronger rods feel faster from cast until the actual bite.
+     */
+    public void applyBiteSpeed(Player player, FishHook hook) {
+        if (player == null || hook == null) return;
+
+        RodTierDefinition tier = tier(player.getInventory().getItemInMainHand());
+        if (tier == null) return;
+
+        double speed = Math.max(0.0, Math.min(0.80, tier.biteSpeed()));
+        int waitMin = scaleFishingTicks(hook.getMinWaitTime(), speed, 20);
+        int waitMax = Math.max(waitMin, scaleFishingTicks(hook.getMaxWaitTime(), speed, 20));
+        int lureMin = scaleFishingTicks(hook.getMinLureTime(), speed, 5);
+        int lureMax = Math.max(lureMin, scaleFishingTicks(hook.getMaxLureTime(), speed, 5));
+
+        // CdrMoonFishing rods use their own progression stats; vanilla Lure must not stack with them.
+        hook.setApplyLure(false);
+        hook.setWaitTime(waitMin, waitMax);
+        hook.setLureTime(lureMin, lureMax);
+        hook.resetFishingState();
+    }
+
     public double rarityMultiplier(Player player, FishDefinition fish) {
         RodTierDefinition tier = tier(player.getInventory().getItemInMainHand());
         double rodLuck = tier == null ? 0.0 : tier.rarityLuck();
@@ -170,6 +195,7 @@ public final class RodManager implements Listener {
                 .append(Component.text(tier.displayName(), NamedTextColor.AQUA)));
         lore.add(Component.text(String.format(Locale.US, "Kekuatan Tarik: %.2fx", tier.reelMultiplier()), NamedTextColor.GRAY));
         lore.add(Component.text(String.format(Locale.US, "Luck Kelangkaan: +%.0f%%", tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
+        lore.add(Component.text(String.format(Locale.US, "Kecepatan Nyamber: +%.0f%%", tier.biteSpeed() * 100.0), NamedTextColor.GRAY));
         meta.lore(lore);
         rod.setItemMeta(meta);
     }
@@ -198,6 +224,8 @@ public final class RodManager implements Listener {
             lore.add(Component.text("Tingkat: " + tier.displayName(), NamedTextColor.AQUA));
             lore.add(Component.text(String.format(Locale.US, "Luck +%.0f%% • Tarik %.2fx",
                     tier.rarityLuck() * 100.0, tier.reelMultiplier()), NamedTextColor.LIGHT_PURPLE));
+            lore.add(Component.text(String.format(Locale.US, "Kecepatan nyamber +%.0f%%",
+                    tier.biteSpeed() * 100.0), NamedTextColor.GOLD));
         }
         lore.add(Component.text("Klik untuk detail joran", NamedTextColor.DARK_GRAY));
         meta.lore(lore.stream().map(line -> line.decoration(TextDecoration.ITALIC, false)).toList());
@@ -214,6 +242,10 @@ public final class RodManager implements Listener {
         if (expected.equals(meta.getItemModel())) return;
         meta.setItemModel(expected);
         item.setItemMeta(meta);
+    }
+
+    private int scaleFishingTicks(int ticks, double speed, int floor) {
+        return Math.max(floor, (int) Math.round(Math.max(1, ticks) * (1.0 - speed)));
     }
 
     private void stripLegacyXp(ItemStack item) {
