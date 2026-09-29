@@ -1,29 +1,35 @@
-# CdrMoonFishing v1.0.8 — Tingkat Joran Pancing
+# CdrMoonFishing v1.0.10 — Tingkat Joran Pancing
 # Joran tidak lagi menggunakan XP. Tier ditentukan langsung oleh item dan
 # nantinya dapat ditingkatkan melalui sistem toko/upgrade.
+# bite-speed = persentase pemangkasan waktu tunggu ikan (0.68 = 68% lebih cepat).
 
 tiers:
   driftwood:
     display-name: "Joran Kayu Apung"
     reel-multiplier: 1.00
     rarity-luck: 0.00
+    bite-speed: 0.00
 
   reinforced:
     display-name: "Joran Diperkuat"
     reel-multiplier: 1.06
     rarity-luck: 0.05
+    bite-speed: 0.20
 
   oceanic:
     display-name: "Joran Samudra"
     reel-multiplier: 1.12
     rarity-luck: 0.12
+    bite-speed: 0.35
 
   abyssal:
     display-name: "Joran Abyssal"
     reel-multiplier: 1.20
     rarity-luck: 0.22
+    bite-speed: 0.52
 
   lunar:
     display-name: "Joran Lunar"
     reel-multiplier: 1.30
     rarity-luck: 0.35
+    bite-speed: 0.68
