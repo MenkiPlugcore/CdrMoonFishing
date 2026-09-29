@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -35,18 +36,27 @@ public final class RodRegistry {
             return;
         }
 
+        boolean migratedBiteSpeed = false;
         List<RodTierDefinition> loaded = new ArrayList<>();
         for (String id : root.getKeys(false)) {
             ConfigurationSection section = root.getConfigurationSection(id);
             if (section == null) continue;
 
+            String normalizedId = id.toLowerCase(Locale.ROOT);
+            double defaultBiteSpeed = defaultBiteSpeed(normalizedId);
+            if (!section.contains("bite-speed")) {
+                section.set("bite-speed", defaultBiteSpeed);
+                migratedBiteSpeed = true;
+            }
+
             RodTierDefinition tier = new RodTierDefinition(
-                    id.toLowerCase(Locale.ROOT),
+                    normalizedId,
                     section.getString("display-name", id),
                     Math.max(0, section.getInt("min-xp", 0)),
                     Math.max(0.1, section.getDouble("reel-multiplier", 1.0)),
                     Math.max(0.0, section.getDouble("rarity-luck", 0.0)),
-                    Math.max(0.1, section.getDouble("xp-multiplier", 1.0))
+                    Math.max(0.1, section.getDouble("xp-multiplier", 1.0)),
+                    Math.max(0.0, Math.min(0.80, section.getDouble("bite-speed", defaultBiteSpeed)))
             );
             loaded.add(tier);
         }
@@ -56,6 +66,16 @@ public final class RodRegistry {
             tiersById.put(tier.id(), tier);
         }
         orderedTiers = List.copyOf(loaded);
+
+        if (migratedBiteSpeed) {
+            try {
+                config.save(file);
+                plugin.getLogger().info("Added bite-speed defaults to existing rod.yml.");
+            } catch (IOException ex) {
+                plugin.getLogger().warning("Could not save bite-speed migration to rod.yml: " + ex.getMessage());
+            }
+        }
+
         plugin.getLogger().info("Loaded " + orderedTiers.size() + " fishing rod tiers.");
     }
 
@@ -96,5 +116,15 @@ public final class RodRegistry {
 
     public double weightXpMultiplier() {
         return Math.max(0.0, config.getDouble("progression.weight-xp-multiplier", 0.5));
+    }
+
+    private double defaultBiteSpeed(String id) {
+        return switch (id) {
+            case "reinforced" -> 0.20;
+            case "oceanic" -> 0.35;
+            case "abyssal" -> 0.52;
+            case "lunar" -> 0.68;
+            default -> 0.00;
+        };
     }
 }
