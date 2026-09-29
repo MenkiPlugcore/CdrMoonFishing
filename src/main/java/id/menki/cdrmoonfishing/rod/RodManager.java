@@ -92,9 +92,7 @@ public final class RodManager implements Listener {
         return fallback;
     }
 
-    /**
-     * Legacy compatibility method. Rod XP no longer exists.
-     */
+    /** Legacy compatibility method. Rod XP no longer exists. */
     public int xp(ItemStack item) {
         stripLegacyXp(item);
         return 0;
@@ -124,17 +122,14 @@ public final class RodManager implements Listener {
         this.collectionLuckProvider = provider == null ? player -> 0.0 : provider;
     }
 
-    /**
-     * Kept as a catch-observer compatibility hook. Catching fish no longer
-     * awards rod XP and can never auto-upgrade a rod.
-     */
+    /** Catching fish no longer awards rod XP and can never auto-upgrade a rod. */
     public void recordCatch(Player player, FishDefinition fish, double weight) {
         // Intentionally empty: rod progression is no longer XP based.
     }
 
     /**
-     * Legacy compatibility hook used by old pending contract/milestone data.
-     * Returning true drains old pending XP without showing or storing it.
+     * Legacy compatibility hook. New config contains no rod XP rewards.
+     * Old pending profile values are removed during startup migration.
      */
     public boolean addXp(Player player, int amount) {
         if (player != null) stripLegacyXp(player.getInventory().getItemInMainHand());
@@ -218,6 +213,7 @@ public final class RodManager implements Listener {
         cleanRodConfig(new File(plugin.getDataFolder(), "rod.yml"));
         cleanRewardXp(new File(plugin.getDataFolder(), "contracts.yml"), "contracts", "rewards.rod-xp");
         cleanRewardXp(new File(plugin.getDataFolder(), "milestones.yml"), "milestones", "reward.rod-xp");
+        cleanPendingMilestoneXp(new File(plugin.getDataFolder(), "milestones/players"));
     }
 
     private void cleanRodConfig(File file) {
@@ -262,6 +258,19 @@ public final class RodManager implements Listener {
             changed = true;
         }
         saveYaml(file, yaml, changed);
+    }
+
+    private void cleanPendingMilestoneXp(File directory) {
+        if (!directory.isDirectory()) return;
+        File[] files = directory.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (files == null) return;
+
+        for (File file : files) {
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+            if (!yaml.contains("pending.rod-xp")) continue;
+            yaml.set("pending.rod-xp", null);
+            saveYaml(file, yaml, true);
+        }
     }
 
     private void saveYaml(File file, YamlConfiguration yaml, boolean changed) {
