@@ -6,6 +6,7 @@ public record RodTierDefinition(
         int minXp,
         double reelMultiplier,
         double rarityLuck,
-        double xpMultiplier
+        double xpMultiplier,
+        double biteSpeed
 ) {
 }
