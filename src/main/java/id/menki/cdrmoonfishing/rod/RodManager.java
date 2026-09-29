@@ -1,34 +1,47 @@
 package id.menki.cdrmoonfishing.rod;
 
 import id.menki.cdrmoonfishing.model.FishDefinition;
-import id.menki.cdrmoonfishing.model.FishRarity;
 import id.menki.cdrmoonfishing.model.RodTierDefinition;
 import id.menki.cdrmoonfishing.registry.RodRegistry;
+import id.menki.cdrmoonfishing.ui.FishingUiManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.function.ToDoubleFunction;
 
-public final class RodManager {
-    private static final int BAR_LENGTH = 12;
+/**
+ * Tier-based fishing rod manager.
+ *
+ * Rod XP was removed in v1.0.8. A rod now keeps a fixed tier in PDC until a
+ * shop/admin upgrade explicitly changes it. Legacy rod_xp data and reward
+ * entries are cleaned automatically for backwards compatibility.
+ */
+public final class RodManager implements Listener {
+    private static final int HUB_ROD_SLOT = 11;
 
     private final JavaPlugin plugin;
     private final RodRegistry registry;
     private final NamespacedKey rodIdKey;
-    private final NamespacedKey rodXpKey;
+    private final NamespacedKey legacyRodXpKey;
     private final NamespacedKey rodTierKey;
     private ToDoubleFunction<Player> collectionLuckProvider = player -> 0.0;
 
@@ -36,8 +49,11 @@ public final class RodManager {
         this.plugin = plugin;
         this.registry = registry;
         this.rodIdKey = new NamespacedKey(plugin, "rod_id");
-        this.rodXpKey = new NamespacedKey(plugin, "rod_xp");
+        this.legacyRodXpKey = new NamespacedKey(plugin, "rod_xp");
         this.rodTierKey = new NamespacedKey(plugin, "rod_tier");
+
+        removeLegacyXpConfiguration();
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     public ItemStack createRod(String tierId) {
@@ -48,7 +64,6 @@ public final class RodManager {
         ItemStack rod = new ItemStack(Material.FISHING_ROD);
         ItemMeta meta = rod.getItemMeta();
         meta.getPersistentDataContainer().set(rodIdKey, PersistentDataType.STRING, UUID.randomUUID().toString());
-        meta.getPersistentDataContainer().set(rodXpKey, PersistentDataType.INTEGER, tier.minXp());
         meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, tier.id());
         rod.setItemMeta(meta);
         refreshMeta(rod);
@@ -62,18 +77,27 @@ public final class RodManager {
 
     public RodTierDefinition tier(ItemStack item) {
         if (!isProgressionRod(item)) return null;
-        int xp = xp(item);
-        RodTierDefinition calculated = registry.tierForXp(xp);
-        if (calculated != null) return calculated;
+        stripLegacyXp(item);
 
-        String stored = item.getItemMeta().getPersistentDataContainer().get(rodTierKey, PersistentDataType.STRING);
-        return registry.get(stored);
+        ItemMeta meta = item.getItemMeta();
+        String stored = meta.getPersistentDataContainer().get(rodTierKey, PersistentDataType.STRING);
+        RodTierDefinition tier = registry.get(stored);
+        if (tier != null) return tier;
+
+        RodTierDefinition fallback = registry.firstTier();
+        if (fallback != null) {
+            meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, fallback.id());
+            item.setItemMeta(meta);
+        }
+        return fallback;
     }
 
+    /**
+     * Legacy compatibility method. Rod XP no longer exists.
+     */
     public int xp(ItemStack item) {
-        if (!isProgressionRod(item)) return 0;
-        Integer value = item.getItemMeta().getPersistentDataContainer().get(rodXpKey, PersistentDataType.INTEGER);
-        return value == null ? 0 : Math.max(0, value);
+        stripLegacyXp(item);
+        return 0;
     }
 
     public double reelMultiplier(Player player) {
@@ -100,45 +124,33 @@ public final class RodManager {
         this.collectionLuckProvider = provider == null ? player -> 0.0 : provider;
     }
 
+    /**
+     * Kept as a catch-observer compatibility hook. Catching fish no longer
+     * awards rod XP and can never auto-upgrade a rod.
+     */
     public void recordCatch(Player player, FishDefinition fish, double weight) {
-        ItemStack rod = player.getInventory().getItemInMainHand();
-        if (!isProgressionRod(rod)) return;
-
-        RodTierDefinition tier = tier(rod);
-        if (tier == null) return;
-
-        int base = registry.baseXp(fish.rarity().name(), defaultBaseXp(fish.rarity()));
-        double raw = (base + (weight * registry.weightXpMultiplier())) * tier.xpMultiplier();
-        int gain = Math.max(1, (int) Math.round(raw));
-        addXp(player, gain);
+        // Intentionally empty: rod progression is no longer XP based.
     }
 
+    /**
+     * Legacy compatibility hook used by old pending contract/milestone data.
+     * Returning true drains old pending XP without showing or storing it.
+     */
     public boolean addXp(Player player, int amount) {
-        if (amount <= 0) return false;
-        ItemStack rod = player.getInventory().getItemInMainHand();
-        if (!isProgressionRod(rod)) {
-            player.sendMessage(Component.text("Hadiah XP joran tertunda: pegang joran progres CdrMoonFishing.", NamedTextColor.YELLOW));
-            return false;
-        }
+        if (player != null) stripLegacyXp(player.getInventory().getItemInMainHand());
+        return amount > 0;
+    }
 
-        RodTierDefinition before = tier(rod);
-        if (before == null) return false;
+    public boolean setTier(ItemStack rod, String tierId) {
+        if (!isProgressionRod(rod)) return false;
+        RodTierDefinition tier = registry.get(tierId);
+        if (tier == null) return false;
 
-        int newXp = xp(rod) + amount;
         ItemMeta meta = rod.getItemMeta();
-        meta.getPersistentDataContainer().set(rodXpKey, PersistentDataType.INTEGER, newXp);
-        RodTierDefinition after = registry.tierForXp(newXp);
-        if (after != null) meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, after.id());
+        meta.getPersistentDataContainer().remove(legacyRodXpKey);
+        meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, tier.id());
         rod.setItemMeta(meta);
         refreshMeta(rod);
-
-        player.sendActionBar(Component.text("XP Joran +" + amount + " • " + newXp + " XP", NamedTextColor.AQUA));
-        if (after != null && !after.id().equals(before.id())) {
-            player.sendTitle("§b§lJORAN NAIK TINGKAT!", "§f" + after.displayName(), 5, 40, 10);
-            player.sendMessage(Component.text("Joran pancing naik menjadi ", NamedTextColor.GRAY)
-                    .append(Component.text(after.displayName(), NamedTextColor.AQUA).decorate(TextDecoration.BOLD)));
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.35f);
-        }
         return true;
     }
 
@@ -147,38 +159,19 @@ public final class RodManager {
         RodTierDefinition tier = tier(rod);
         if (tier == null) return;
 
-        int currentXp = xp(rod);
-        RodTierDefinition next = registry.nextTier(tier);
         ItemMeta meta = rod.getItemMeta();
+        meta.getPersistentDataContainer().remove(legacyRodXpKey);
+        meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, tier.id());
         meta.displayName(Component.text(tier.displayName(), NamedTextColor.AQUA).decorate(TextDecoration.BOLD));
 
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("Joran Progres CdrMoonFishing", NamedTextColor.DARK_AQUA));
+        lore.add(Component.text("Joran CdrMoonFishing", NamedTextColor.DARK_AQUA));
         lore.add(Component.empty());
         lore.add(Component.text("Tingkat: ", NamedTextColor.GRAY)
                 .append(Component.text(tier.displayName(), NamedTextColor.AQUA)));
         lore.add(Component.text(String.format(Locale.US, "Kekuatan Tarik: %.2fx", tier.reelMultiplier()), NamedTextColor.GRAY));
         lore.add(Component.text(String.format(Locale.US, "Luck Kelangkaan: +%.0f%%", tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
-        lore.add(Component.text(String.format(Locale.US, "Perolehan XP Joran: %.2fx", tier.xpMultiplier()), NamedTextColor.GRAY));
-        lore.add(Component.empty());
-
-        if (next == null) {
-            lore.add(Component.text("XP: " + currentXp + " • TINGKAT MAKS", NamedTextColor.GOLD));
-            lore.add(Component.text("[" + "▰".repeat(BAR_LENGTH) + "]", NamedTextColor.GOLD));
-        } else {
-            int tierStart = tier.minXp();
-            int target = next.minXp();
-            int range = Math.max(1, target - tierStart);
-            double progress = Math.max(0.0, Math.min(1.0, (currentXp - tierStart) / (double) range));
-            int filled = Math.max(0, Math.min(BAR_LENGTH, (int) Math.round(progress * BAR_LENGTH)));
-            String bar = "▰".repeat(filled) + "▱".repeat(BAR_LENGTH - filled);
-            lore.add(Component.text("XP: " + currentXp + " / " + target, NamedTextColor.GRAY));
-            lore.add(Component.text("[" + bar + "]", NamedTextColor.GREEN));
-            lore.add(Component.text("Berikutnya: " + next.displayName(), NamedTextColor.DARK_GRAY));
-        }
-
         meta.lore(lore);
-        meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, tier.id());
         rod.setItemMeta(meta);
     }
 
@@ -186,13 +179,98 @@ public final class RodManager {
         return registry;
     }
 
-    private int defaultBaseXp(FishRarity rarity) {
-        return switch (rarity) {
-            case COMMON -> 5;
-            case UNCOMMON -> 8;
-            case RARE -> 16;
-            case EPIC -> 35;
-            case LEGENDARY -> 100;
-        };
+    @EventHandler
+    public void onHubOpen(InventoryOpenEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) return;
+        if (!(event.getInventory().getHolder() instanceof FishingUiManager.HubHolder)) return;
+
+        ItemStack button = event.getInventory().getItem(HUB_ROD_SLOT);
+        if (button == null || button.getType().isAir()) return;
+
+        ItemMeta meta = button.getItemMeta();
+        ItemStack heldRod = player.getInventory().getItemInMainHand();
+        RodTierDefinition tier = tier(heldRod);
+        List<Component> lore = new ArrayList<>();
+
+        if (tier == null) {
+            lore.add(Component.text("Tidak memegang joran CdrMoonFishing", NamedTextColor.GRAY));
+            lore.add(Component.text("Pegang joran di tangan utama", NamedTextColor.DARK_GRAY));
+        } else {
+            lore.add(Component.text("Tingkat: " + tier.displayName(), NamedTextColor.AQUA));
+            lore.add(Component.text(String.format(Locale.US, "Luck +%.0f%% • Tarik %.2fx",
+                    tier.rarityLuck() * 100.0, tier.reelMultiplier()), NamedTextColor.LIGHT_PURPLE));
+        }
+        lore.add(Component.text("Klik untuk detail joran", NamedTextColor.DARK_GRAY));
+        meta.lore(lore.stream().map(line -> line.decoration(TextDecoration.ITALIC, false)).toList());
+        button.setItemMeta(meta);
+        event.getInventory().setItem(HUB_ROD_SLOT, button);
+    }
+
+    private void stripLegacyXp(ItemStack item) {
+        if (item == null || item.getType().isAir() || !item.hasItemMeta()) return;
+        ItemMeta meta = item.getItemMeta();
+        if (!meta.getPersistentDataContainer().has(legacyRodXpKey, PersistentDataType.INTEGER)) return;
+        meta.getPersistentDataContainer().remove(legacyRodXpKey);
+        item.setItemMeta(meta);
+    }
+
+    private void removeLegacyXpConfiguration() {
+        cleanRodConfig(new File(plugin.getDataFolder(), "rod.yml"));
+        cleanRewardXp(new File(plugin.getDataFolder(), "contracts.yml"), "contracts", "rewards.rod-xp");
+        cleanRewardXp(new File(plugin.getDataFolder(), "milestones.yml"), "milestones", "reward.rod-xp");
+    }
+
+    private void cleanRodConfig(File file) {
+        if (!file.exists()) return;
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        boolean changed = false;
+
+        if (yaml.contains("progression")) {
+            yaml.set("progression", null);
+            changed = true;
+        }
+
+        ConfigurationSection tiers = yaml.getConfigurationSection("tiers");
+        if (tiers != null) {
+            for (String id : tiers.getKeys(false)) {
+                String minXp = "tiers." + id + ".min-xp";
+                String xpMultiplier = "tiers." + id + ".xp-multiplier";
+                if (yaml.contains(minXp)) {
+                    yaml.set(minXp, null);
+                    changed = true;
+                }
+                if (yaml.contains(xpMultiplier)) {
+                    yaml.set(xpMultiplier, null);
+                    changed = true;
+                }
+            }
+        }
+        saveYaml(file, yaml, changed);
+    }
+
+    private void cleanRewardXp(File file, String rootPath, String relativePath) {
+        if (!file.exists()) return;
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        ConfigurationSection root = yaml.getConfigurationSection(rootPath);
+        if (root == null) return;
+
+        boolean changed = false;
+        for (String id : root.getKeys(false)) {
+            String path = rootPath + "." + id + "." + relativePath;
+            if (!yaml.contains(path)) continue;
+            yaml.set(path, null);
+            changed = true;
+        }
+        saveYaml(file, yaml, changed);
+    }
+
+    private void saveYaml(File file, YamlConfiguration yaml, boolean changed) {
+        if (!changed) return;
+        try {
+            yaml.save(file);
+            plugin.getLogger().info("Removed legacy rod XP data from " + file.getName() + ".");
+        } catch (IOException ex) {
+            plugin.getLogger().warning("Could not remove legacy rod XP data from " + file.getName() + ": " + ex.getMessage());
+        }
     }
 }
