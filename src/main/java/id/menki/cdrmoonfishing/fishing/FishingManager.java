@@ -352,7 +352,6 @@ public final class FishingManager {
             BaitDefinition bait = baitManager.registry().get(session.baitId());
             lore.add(Component.text("Umpan: " + (bait == null ? session.baitId() : bait.displayName()), NamedTextColor.DARK_GRAY));
         }
-        lore.add(Component.text("Wilayah: " + session.region(), NamedTextColor.DARK_GRAY));
         lore.add(Component.text("Kedalaman: " + session.depth() + " blok", NamedTextColor.DARK_GRAY));
         lore.add(Component.text("Ditangkap oleh: " + player.getName(), NamedTextColor.DARK_GRAY));
         meta.lore(lore);
