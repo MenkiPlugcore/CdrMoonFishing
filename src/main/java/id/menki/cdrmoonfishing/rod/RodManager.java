@@ -31,9 +31,9 @@ import java.util.function.ToDoubleFunction;
 /**
  * Tier-based fishing rod manager.
  *
- * Rod XP was removed in v1.0.8. A rod now keeps a fixed tier in PDC until a
- * shop/admin upgrade explicitly changes it. Legacy rod_xp data and reward
- * entries are cleaned automatically for backwards compatibility.
+ * Rod XP was removed in v1.0.8. v1.0.9 maps every tier to a native 1.21.11
+ * minecraft:item_model entry (cdrmoonfishing:rod/<tier>) so custom visuals do
+ * not consume or collide with numeric CustomModelData used by other plugins.
  */
 public final class RodManager implements Listener {
     private static final int HUB_ROD_SLOT = 11;
@@ -65,6 +65,7 @@ public final class RodManager implements Listener {
         ItemMeta meta = rod.getItemMeta();
         meta.getPersistentDataContainer().set(rodIdKey, PersistentDataType.STRING, UUID.randomUUID().toString());
         meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, tier.id());
+        meta.setItemModel(itemModelKey(tier));
         rod.setItemMeta(meta);
         refreshMeta(rod);
         return rod;
@@ -82,11 +83,15 @@ public final class RodManager implements Listener {
         ItemMeta meta = item.getItemMeta();
         String stored = meta.getPersistentDataContainer().get(rodTierKey, PersistentDataType.STRING);
         RodTierDefinition tier = registry.get(stored);
-        if (tier != null) return tier;
+        if (tier != null) {
+            syncVisualModel(item, meta, tier);
+            return tier;
+        }
 
         RodTierDefinition fallback = registry.firstTier();
         if (fallback != null) {
             meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, fallback.id());
+            meta.setItemModel(itemModelKey(fallback));
             item.setItemMeta(meta);
         }
         return fallback;
@@ -127,10 +132,7 @@ public final class RodManager implements Listener {
         // Intentionally empty: rod progression is no longer XP based.
     }
 
-    /**
-     * Legacy compatibility hook. New config contains no rod XP rewards.
-     * Old pending profile values are removed during startup migration.
-     */
+    /** Legacy compatibility hook. */
     public boolean addXp(Player player, int amount) {
         if (player != null) stripLegacyXp(player.getInventory().getItemInMainHand());
         return amount > 0;
@@ -144,6 +146,7 @@ public final class RodManager implements Listener {
         ItemMeta meta = rod.getItemMeta();
         meta.getPersistentDataContainer().remove(legacyRodXpKey);
         meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, tier.id());
+        meta.setItemModel(itemModelKey(tier));
         rod.setItemMeta(meta);
         refreshMeta(rod);
         return true;
@@ -157,6 +160,7 @@ public final class RodManager implements Listener {
         ItemMeta meta = rod.getItemMeta();
         meta.getPersistentDataContainer().remove(legacyRodXpKey);
         meta.getPersistentDataContainer().set(rodTierKey, PersistentDataType.STRING, tier.id());
+        meta.setItemModel(itemModelKey(tier));
         meta.displayName(Component.text(tier.displayName(), NamedTextColor.AQUA).decorate(TextDecoration.BOLD));
 
         List<Component> lore = new ArrayList<>();
@@ -199,6 +203,17 @@ public final class RodManager implements Listener {
         meta.lore(lore.stream().map(line -> line.decoration(TextDecoration.ITALIC, false)).toList());
         button.setItemMeta(meta);
         event.getInventory().setItem(HUB_ROD_SLOT, button);
+    }
+
+    private NamespacedKey itemModelKey(RodTierDefinition tier) {
+        return new NamespacedKey(plugin, "rod/" + tier.id());
+    }
+
+    private void syncVisualModel(ItemStack item, ItemMeta meta, RodTierDefinition tier) {
+        NamespacedKey expected = itemModelKey(tier);
+        if (expected.equals(meta.getItemModel())) return;
+        meta.setItemModel(expected);
+        item.setItemMeta(meta);
     }
 
     private void stripLegacyXp(ItemStack item) {
