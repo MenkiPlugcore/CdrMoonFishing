@@ -38,8 +38,8 @@ public final class FishRodCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(Component.text("Tingkat Joran Pancing", NamedTextColor.AQUA));
             for (RodTierDefinition tier : rodManager.registry().tiers()) {
                 sender.sendMessage(Component.text("• " + tier.id() + " — " + tier.displayName()
-                        + " • " + tier.minXp() + " XP"
-                        + String.format(Locale.US, " • tarik %.2fx • luck +%.0f%%", tier.reelMultiplier(), tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
+                        + String.format(Locale.US, " • tarik %.2fx • luck +%.0f%%",
+                        tier.reelMultiplier(), tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
             }
             return true;
         }
@@ -70,8 +70,9 @@ public final class FishRodCommand implements CommandExecutor, TabCompleter {
             var leftovers = target.getInventory().addItem(rod);
             leftovers.values().forEach(item -> target.getWorld().dropItemNaturally(target.getLocation(), item));
             RodTierDefinition tier = rodManager.tier(rod);
-            sender.sendMessage(Component.text("Memberikan " + (tier == null ? "joran progres" : tier.displayName()) + " kepada " + target.getName() + ".", NamedTextColor.GREEN));
-            target.sendMessage(Component.text("Kamu menerima joran progres CdrMoonFishing.", NamedTextColor.AQUA));
+            sender.sendMessage(Component.text("Memberikan " + (tier == null ? "joran CdrMoonFishing" : tier.displayName())
+                    + " kepada " + target.getName() + ".", NamedTextColor.GREEN));
+            target.sendMessage(Component.text("Kamu menerima joran CdrMoonFishing.", NamedTextColor.AQUA));
             return true;
         }
 
@@ -82,25 +83,26 @@ public final class FishRodCommand implements CommandExecutor, TabCompleter {
     private void showInfo(Player player) {
         ItemStack rod = player.getInventory().getItemInMainHand();
         if (!rodManager.isProgressionRod(rod)) {
-            player.sendMessage(Component.text("Pegang joran progres CdrMoonFishing di tangan utama.", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("Pegang joran CdrMoonFishing di tangan utama.", NamedTextColor.GRAY));
             return;
         }
 
         RodTierDefinition tier = rodManager.tier(rod);
         if (tier == null) {
-            player.sendMessage(Component.text("Joran progres ini memiliki tingkat yang tidak valid.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Joran ini memiliki tingkat yang tidak valid.", NamedTextColor.RED));
             return;
         }
 
-        int xp = rodManager.xp(rod);
         RodTierDefinition next = rodManager.registry().nextTier(tier);
         player.sendMessage(Component.text("━━━━━━━━ JORAN PANCING ━━━━━━━━", NamedTextColor.DARK_AQUA));
         player.sendMessage(Component.text("Tingkat: " + tier.displayName(), NamedTextColor.AQUA));
-        player.sendMessage(Component.text("XP: " + xp + (next == null ? " • MAKS" : " / " + next.minXp()), NamedTextColor.GRAY));
         player.sendMessage(Component.text(String.format(Locale.US, "Kekuatan Tarik: %.2fx", tier.reelMultiplier()), NamedTextColor.GRAY));
         player.sendMessage(Component.text(String.format(Locale.US, "Luck Kelangkaan: +%.0f%%", tier.rarityLuck() * 100.0), NamedTextColor.GRAY));
-        player.sendMessage(Component.text(String.format(Locale.US, "Perolehan XP Joran: %.2fx", tier.xpMultiplier()), NamedTextColor.GRAY));
-        if (next != null) player.sendMessage(Component.text("Tingkat Berikutnya: " + next.displayName(), NamedTextColor.DARK_GRAY));
+        if (next != null) {
+            player.sendMessage(Component.text("Tingkat Berikutnya: " + next.displayName(), NamedTextColor.DARK_GRAY));
+        } else {
+            player.sendMessage(Component.text("Tingkat maksimum.", NamedTextColor.GOLD));
+        }
     }
 
     @Override
