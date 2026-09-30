@@ -11,6 +11,8 @@ public final class VaultEconomyHook {
     private final JavaPlugin plugin;
     private Object provider;
     private Method depositMethod;
+    private Method withdrawMethod;
+    private Method balanceMethod;
     private Method formatMethod;
 
     public VaultEconomyHook(JavaPlugin plugin) {
@@ -31,6 +33,8 @@ public final class VaultEconomyHook {
     private boolean connect(boolean logErrors) {
         provider = null;
         depositMethod = null;
+        withdrawMethod = null;
+        balanceMethod = null;
         formatMethod = null;
 
         if (!plugin.getServer().getPluginManager().isPluginEnabled("Vault")) {
@@ -47,6 +51,8 @@ public final class VaultEconomyHook {
 
             provider = registration.getProvider();
             depositMethod = economyClass.getMethod("depositPlayer", OfflinePlayer.class, double.class);
+            withdrawMethod = economyClass.getMethod("withdrawPlayer", OfflinePlayer.class, double.class);
+            balanceMethod = economyClass.getMethod("getBalance", OfflinePlayer.class);
             formatMethod = economyClass.getMethod("format", double.class);
             return true;
         } catch (ReflectiveOperationException ex) {
@@ -58,7 +64,7 @@ public final class VaultEconomyHook {
     }
 
     public boolean isReady() {
-        return provider != null && depositMethod != null;
+        return provider != null && depositMethod != null && withdrawMethod != null && balanceMethod != null;
     }
 
     public DepositResult deposit(OfflinePlayer player, double amount) {
@@ -69,25 +75,54 @@ public final class VaultEconomyHook {
             return new DepositResult(false, "Vault economy provider is not available.");
         }
 
+        TransactionResponse response = invokeTransaction(depositMethod, player, amount, "deposit");
+        return new DepositResult(response.success(), response.error());
+    }
+
+    public WithdrawResult withdraw(OfflinePlayer player, double amount) {
+        if (amount < 0.0) {
+            return new WithdrawResult(false, "Invalid transaction amount.");
+        }
+        if (amount == 0.0) {
+            return new WithdrawResult(true, null);
+        }
+        if (!ensureReady()) {
+            return new WithdrawResult(false, "Vault economy provider is not available.");
+        }
+
+        TransactionResponse response = invokeTransaction(withdrawMethod, player, amount, "withdrawal");
+        return new WithdrawResult(response.success(), response.error());
+    }
+
+    public double balance(OfflinePlayer player) {
+        if (!ensureReady() || player == null) return 0.0;
         try {
-            Object response = depositMethod.invoke(provider, player, amount);
+            Object value = balanceMethod.invoke(provider, player);
+            return value instanceof Number number ? Math.max(0.0, number.doubleValue()) : 0.0;
+        } catch (ReflectiveOperationException ex) {
+            plugin.getLogger().warning("Vault balance lookup failed: " + ex.getMessage());
+            return 0.0;
+        }
+    }
+
+    private TransactionResponse invokeTransaction(Method method, OfflinePlayer player, double amount, String operation) {
+        try {
+            Object response = method.invoke(provider, player, amount);
             Method successMethod = response.getClass().getMethod("transactionSuccess");
             boolean success = Boolean.TRUE.equals(successMethod.invoke(response));
-            if (success) {
-                return new DepositResult(true, null);
-            }
+            if (success) return new TransactionResponse(true, null);
 
-            String error = "Economy provider rejected the transaction.";
+            String error = "Economy provider rejected the " + operation + ".";
             try {
                 Object raw = response.getClass().getField("errorMessage").get(response);
                 if (raw != null && !raw.toString().isBlank()) error = raw.toString();
             } catch (ReflectiveOperationException ignored) {
                 // Vault EconomyResponse exposes this field, but keep a safe fallback.
             }
-            return new DepositResult(false, error);
+            return new TransactionResponse(false, error);
         } catch (ReflectiveOperationException ex) {
-            plugin.getLogger().warning("Vault deposit failed: " + ex.getMessage());
-            return new DepositResult(false, "Economy transaction failed.");
+            plugin.getLogger().warning("Vault " + operation + " failed: " + ex.getMessage());
+            return new TransactionResponse(false, "Economy transaction failed.");
         }
     }
 
@@ -103,5 +138,7 @@ public final class VaultEconomyHook {
         return String.format(Locale.US, "%.2f", amount);
     }
 
+    private record TransactionResponse(boolean success, String error) {}
     public record DepositResult(boolean success, String error) {}
+    public record WithdrawResult(boolean success, String error) {}
 }
