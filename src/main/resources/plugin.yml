@@ -37,8 +37,8 @@ commands:
     usage: /fishleaderboard [catches|weight|biggest|legendary] [page]
     aliases: [flb, fishlb]
   fishrod:
-    description: View and manage CdrMoonFishing progression rods
-    usage: /fishrod [info|tiers|give]
+    description: View and manage CdrMoonFishing progression rods and Fishing Supply
+    usage: /fishrod [info|tiers|give|supply]
     aliases: [frod, fishingrod]
   fishcontracts:
     description: View daily fishing contracts
