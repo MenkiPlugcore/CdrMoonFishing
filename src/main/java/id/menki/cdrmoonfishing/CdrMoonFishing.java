@@ -27,6 +27,7 @@ import id.menki.cdrmoonfishing.listener.FishMarketListener;
 import id.menki.cdrmoonfishing.listener.FishingListener;
 import id.menki.cdrmoonfishing.listener.FishingUiListener;
 import id.menki.cdrmoonfishing.listener.MarketNpcListener;
+import id.menki.cdrmoonfishing.listener.SupplyListener;
 import id.menki.cdrmoonfishing.market.FishMarketManager;
 import id.menki.cdrmoonfishing.market.MarketAccessManager;
 import id.menki.cdrmoonfishing.milestone.FishDexMilestoneManager;
@@ -35,6 +36,8 @@ import id.menki.cdrmoonfishing.registry.FishRegistry;
 import id.menki.cdrmoonfishing.registry.RodRegistry;
 import id.menki.cdrmoonfishing.rod.RodManager;
 import id.menki.cdrmoonfishing.stats.PlayerStatsManager;
+import id.menki.cdrmoonfishing.supply.SupplyAccessManager;
+import id.menki.cdrmoonfishing.supply.SupplyShopManager;
 import id.menki.cdrmoonfishing.tournament.TournamentManager;
 import id.menki.cdrmoonfishing.ui.FishingActionBarRenderer;
 import id.menki.cdrmoonfishing.ui.FishingUiManager;
@@ -55,6 +58,8 @@ public final class CdrMoonFishing extends JavaPlugin {
     private VaultEconomyHook economyHook;
     private FishMarketManager fishMarketManager;
     private MarketAccessManager marketAccessManager;
+    private SupplyShopManager supplyShopManager;
+    private SupplyAccessManager supplyAccessManager;
     private TournamentManager tournamentManager;
     private GlobalLeaderboardManager globalLeaderboardManager;
     private FishItemProviderManager fishItemProviderManager;
@@ -74,6 +79,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         saveResource("rod.yml", false);
         saveResource("contracts.yml", false);
         saveResource("milestones.yml", false);
+        saveResource("supply.yml", false);
         FishContentMigration.apply(this);
         IndonesianLocalizationMigration.apply(this);
 
@@ -113,6 +119,8 @@ public final class CdrMoonFishing extends JavaPlugin {
         this.fishingManager = new FishingManager(this, fishRegistry, baitManager, playerStatsManager, rodManager, contractManager);
         this.fishMarketManager = new FishMarketManager(this, fishRegistry, economyHook);
         this.marketAccessManager = new MarketAccessManager(this, fishMarketManager);
+        this.supplyShopManager = new SupplyShopManager(this, rodManager, baitRegistry, economyHook);
+        this.supplyAccessManager = new SupplyAccessManager(this, supplyShopManager);
         this.fishingUiManager = new FishingUiManager(this);
         this.actionBarRenderer = new FishingActionBarRenderer(this);
         this.actionBarRenderer.start();
@@ -121,6 +129,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new FishMarketListener(fishMarketManager), this);
         getServer().getPluginManager().registerEvents(new FishingUiListener(fishingUiManager, marketAccessManager), this);
         getServer().getPluginManager().registerEvents(new MarketNpcListener(marketAccessManager), this);
+        getServer().getPluginManager().registerEvents(new SupplyListener(supplyShopManager, supplyAccessManager), this);
 
         PluginCommand cdrFish = getCommand("cdrfish");
         if (cdrFish != null) cdrFish.setExecutor(new FishingHubCommand(fishingUiManager));
@@ -161,7 +170,7 @@ public final class CdrMoonFishing extends JavaPlugin {
             fishLeaderboard.setTabCompleter(leaderboardCommand);
         } else getLogger().severe("Command 'fishleaderboard' is missing from plugin.yml.");
 
-        FishRodCommand rodCommand = new FishRodCommand(rodManager);
+        FishRodCommand rodCommand = new FishRodCommand(rodManager, supplyShopManager, supplyAccessManager);
         PluginCommand fishRod = getCommand("fishrod");
         if (fishRod != null) {
             fishRod.setExecutor(rodCommand);
@@ -193,6 +202,8 @@ public final class CdrMoonFishing extends JavaPlugin {
         getLogger().info("Fish Market access: warp=" + (marketAccessManager.hasWarp() ? "SET" : "NOT_SET")
                 + " | Citizens=" + (marketAccessManager.citizensAvailable() ? "READY" : "OFFLINE")
                 + " | bound merchants=" + marketAccessManager.boundNpcIds().size());
+        getLogger().info("Fishing Supply: Citizens=" + (supplyAccessManager.citizensAvailable() ? "READY" : "OFFLINE")
+                + " | bound NPCs=" + supplyAccessManager.boundNpcIds().size());
     }
 
     @Override
@@ -218,8 +229,10 @@ public final class CdrMoonFishing extends JavaPlugin {
         if (economyHook != null) economyHook.refresh();
         if (fishMarketManager != null) fishMarketManager.reloadSecurityLedger();
         if (marketAccessManager != null) marketAccessManager.reload();
+        if (supplyShopManager != null) supplyShopManager.reload();
+        if (supplyAccessManager != null) supplyAccessManager.reload();
         if (fishItemProviderManager != null) fishItemProviderManager.clearWarnings();
-        getLogger().info("Configuration, localization, registries and Fish Market access reloaded.");
+        getLogger().info("Configuration, localization, registries, Fish Market and Fishing Supply reloaded.");
     }
 
     public FishingManager getFishingManager() { return fishingManager; }
@@ -235,6 +248,8 @@ public final class CdrMoonFishing extends JavaPlugin {
     public VaultEconomyHook getEconomyHook() { return economyHook; }
     public FishMarketManager getFishMarketManager() { return fishMarketManager; }
     public MarketAccessManager getMarketAccessManager() { return marketAccessManager; }
+    public SupplyShopManager getSupplyShopManager() { return supplyShopManager; }
+    public SupplyAccessManager getSupplyAccessManager() { return supplyAccessManager; }
     public TournamentManager getTournamentManager() { return tournamentManager; }
     public GlobalLeaderboardManager getGlobalLeaderboardManager() { return globalLeaderboardManager; }
     public FishItemProviderManager getFishItemProviderManager() { return fishItemProviderManager; }
