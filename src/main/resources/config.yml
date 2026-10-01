@@ -1,6 +1,6 @@
-# CdrMoonFishing v1.0.6
+# CdrMoonFishing v1.2.1
 # Key yang belum ada akan digabung otomatis saat startup/reload.
-config-version: 2
+config-version: 3
 
 minigame:
   tick-period: 5
@@ -10,9 +10,17 @@ minigame:
   danger-low: 5.0
   danger-high: 95.0
   danger-grace-ticks: 8
+
+  # Input player selalu mendorong marker ke kanan.
   reel-power: 7.5
   reel-cooldown-ms: 180
+
+  # v1.2.1: semua gerakan otomatis ikan hanya menarik marker ke kiri.
+  # slack-per-tick = tarikan kiri dasar saat player tidak menekan reel.
+  # fish-pull-scale = skala pull-min/pull-max tiap spesies agar tetap nyaman di Bedrock.
   slack-per-tick: 2.0
+  fish-pull-scale: 0.55
+
   progress-per-safe-tick: 4.0
   progress-loss-outside: 1.5
   timeout-seconds: 25
@@ -35,6 +43,10 @@ ui:
     show-state: false
 
 behavior:
+  # Semua surge adalah tambahan tarikan ke KIRI. Tidak ada behavior yang
+  # mendorong marker ke kanan; kanan hanya berasal dari input reel player.
+  surge-scale: 0.55
+
   erratic-surge-chance: 0.18
   erratic-surge-min: 2.5
   erratic-surge-max: 5.5
