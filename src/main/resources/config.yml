@@ -1,6 +1,6 @@
-# CdrMoonFishing v1.2.1
+# CdrMoonFishing v1.3.0
 # Key yang belum ada akan digabung otomatis saat startup/reload.
-config-version: 3
+config-version: 4
 
 minigame:
   tick-period: 5
@@ -15,9 +15,7 @@ minigame:
   reel-power: 7.5
   reel-cooldown-ms: 180
 
-  # v1.2.1: semua gerakan otomatis ikan hanya menarik marker ke kiri.
-  # slack-per-tick = tarikan kiri dasar saat player tidak menekan reel.
-  # fish-pull-scale = skala pull-min/pull-max tiap spesies agar tetap nyaman di Bedrock.
+  # Semua gerakan otomatis ikan hanya menarik marker ke kiri.
   slack-per-tick: 2.0
   fish-pull-scale: 0.55
 
@@ -25,8 +23,6 @@ minigame:
   progress-loss-outside: 1.5
   timeout-seconds: 25
 
-# HUD lane satu baris. Marker bergerak di jalur tetap sementara zona
-# aman / peringatan / bahaya selalu terlihat.
 ui:
   action-bar:
     enabled: true
@@ -43,10 +39,7 @@ ui:
     show-state: false
 
 behavior:
-  # Semua surge adalah tambahan tarikan ke KIRI. Tidak ada behavior yang
-  # mendorong marker ke kanan; kanan hanya berasal dari input reel player.
   surge-scale: 0.55
-
   erratic-surge-chance: 0.18
   erratic-surge-min: 2.5
   erratic-surge-max: 5.5
@@ -56,6 +49,29 @@ behavior:
   diving-surge-every-ticks: 8
   diving-surge-min: 5.0
   diving-surge-max: 8.0
+
+# v1.3.0 — Fishing Fever
+# Admin dapat menyalakan buff global sementara dengan:
+# /fishevent start 2x 30m
+# /fishevent start 4x 20m
+# /fishevent start 8x 10m
+#
+# Angka x adalah intensitas luck, BUKAN pengali berat mentah. Berat tangkapan
+# tetap dibatasi min-weight/max-weight spesies, hanya distribusinya condong ke
+# ikan yang lebih besar.
+fishing-event:
+  # Seberapa besar setiap rarity menikmati intensitas event.
+  # Rumus: 1 + ((eventMultiplier - 1) * strength)
+  rarity-strength:
+    COMMON: 0.00
+    UNCOMMON: 0.15
+    RARE: 0.45
+    EPIC: 0.75
+    LEGENDARY: 1.00
+
+  # 1.0 = x2/x4/x8 memakai intensitas penuh untuk bias berat.
+  # Turunkan ke 0.5 jika ikan besar terlalu sering muncul.
+  big-fish-power-scale: 1.0
 
 economy:
   enabled: true
@@ -72,11 +88,8 @@ economy:
     featured-multiplier: 1.35
     timezone: "Asia/Jakarta"
 
-# Catch ID diberikan pada tangkapan baru. Ledger penjualan mencegah
-# hasil duplikasi dengan ID yang sama dijual lebih dari sekali.
 security:
   market:
-    # false = ikan lama sebelum v1.0 masih dapat dijual.
     require-catch-uid: false
 
 tournament:
