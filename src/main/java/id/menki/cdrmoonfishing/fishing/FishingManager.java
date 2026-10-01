@@ -172,7 +172,9 @@ public final class FishingManager {
         double dangerLow = plugin.getConfig().getDouble("minigame.danger-low", 5.0);
         double dangerHigh = plugin.getConfig().getDouble("minigame.danger-high", 95.0);
         int dangerGrace = Math.max(1, plugin.getConfig().getInt("minigame.danger-grace-ticks", 8));
-        double slack = plugin.getConfig().getDouble("minigame.slack-per-tick", 2.0);
+        double slack = Math.max(0.0, plugin.getConfig().getDouble("minigame.slack-per-tick", 2.0));
+        double fishPullScale = Math.max(0.0, plugin.getConfig().getDouble("minigame.fish-pull-scale", 0.55));
+        double surgeScale = Math.max(0.0, plugin.getConfig().getDouble("behavior.surge-scale", 0.55));
         double baseSafeProgress = plugin.getConfig().getDouble("minigame.progress-per-safe-tick", 4.0);
         double progressLoss = plugin.getConfig().getDouble("minigame.progress-loss-outside", 1.5);
         long timeoutMs = Math.max(5L, plugin.getConfig().getLong("minigame.timeout-seconds", 25L)) * 1000L;
@@ -196,7 +198,7 @@ public final class FishingManager {
             session.behaviorTicks(session.behaviorTicks() + 1);
             double pull = randomBetween(fish.pullMin(), fish.pullMax()) * pullMultiplier;
             double jitter = ThreadLocalRandom.current().nextDouble(-0.35, 0.36);
-            double behaviorForce = behaviorForce(player, session, behavior);
+            double behaviorPull = behaviorPull(player, session, behavior) * surgeScale;
 
             if (behavior == FishBehavior.CALM) {
                 pull *= 0.85;
@@ -207,7 +209,12 @@ public final class FishingManager {
                 pull *= 1.10;
             }
 
-            session.tension(clamp(session.tension() + pull + behaviorForce - slack + jitter, 0.0, 100.0));
+            // v1.2.1 Bedrock-safe control model:
+            // fish/autonomous physics can ONLY reduce tension (move marker left).
+            // Java use/attack and Bedrock input both remain the same reel pulse that moves right.
+            double leftPull = slack + (pull * fishPullScale) + behaviorPull + jitter;
+            leftPull = Math.max(0.05, leftPull); // jitter may soften a pull, never reverse its direction.
+            session.tension(clamp(session.tension() - leftPull, 0.0, 100.0));
 
             boolean safe = session.tension() >= safeMin && session.tension() <= safeMax;
             if (safe) session.progress(clamp(session.progress() + (baseSafeProgress * progressMultiplier), 0.0, 100.0));
@@ -267,25 +274,25 @@ public final class FishingManager {
         }
     }
 
-    private double behaviorForce(Player player, FishingSession session, FishBehavior behavior) {
+    private double behaviorPull(Player player, FishingSession session, FishBehavior behavior) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        double force = 0.0;
+        double pull = 0.0;
 
         switch (behavior) {
             case CALM -> { return 0.0; }
             case ERRATIC -> {
                 double chance = clamp(plugin.getConfig().getDouble("behavior.erratic-surge-chance", 0.18), 0.0, 1.0);
                 if (random.nextDouble() < chance) {
-                    double strength = randomBetween(
+                    // Erratic changes pull strength unpredictably, but never pushes the marker right.
+                    pull = randomBetween(
                             plugin.getConfig().getDouble("behavior.erratic-surge-min", 2.5),
                             plugin.getConfig().getDouble("behavior.erratic-surge-max", 5.5));
-                    force = random.nextBoolean() ? strength : -strength * 0.75;
                 }
             }
             case AGGRESSIVE -> {
                 double chance = clamp(plugin.getConfig().getDouble("behavior.aggressive-surge-chance", 0.14), 0.0, 1.0);
                 if (random.nextDouble() < chance) {
-                    force = randomBetween(
+                    pull = randomBetween(
                             plugin.getConfig().getDouble("behavior.aggressive-surge-min", 3.5),
                             plugin.getConfig().getDouble("behavior.aggressive-surge-max", 7.0));
                 }
@@ -293,17 +300,18 @@ public final class FishingManager {
             case DIVING -> {
                 int every = Math.max(2, plugin.getConfig().getInt("behavior.diving-surge-every-ticks", 8));
                 if (session.behaviorTicks() % every == 0) {
-                    force = randomBetween(
+                    pull = randomBetween(
                             plugin.getConfig().getDouble("behavior.diving-surge-min", 5.0),
                             plugin.getConfig().getDouble("behavior.diving-surge-max", 8.0));
                 }
             }
         }
 
-        if (Math.abs(force) >= 2.0) {
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.45f, force > 0 ? 0.75f : 1.35f);
+        pull = Math.max(0.0, pull);
+        if (pull >= 2.0) {
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.45f, 0.75f);
         }
-        return force;
+        return pull;
     }
 
     private void completeCatch(Player player, FishingSession session) {
