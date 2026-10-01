@@ -28,11 +28,19 @@ import java.util.Locale;
 import java.util.Set;
 
 public final class FishMarketManager {
-    public static final int SLOT_FEATURED = 11;
-    public static final int SLOT_HELD = 13;
-    public static final int SLOT_SELL_HELD = 15;
-    public static final int SLOT_SELL_ALL = 17;
-    public static final int SLOT_CLOSE = 22;
+    public static final int SLOT_PRICE_LIST = 10;
+    public static final int SLOT_FEATURED = 12;
+    public static final int SLOT_HELD = 14;
+    public static final int SLOT_SELL_HELD = 16;
+    public static final int SLOT_SELL_ALL = 22;
+    public static final int SLOT_SECURITY = 25;
+    public static final int SLOT_CLOSE = 26;
+
+    private static final int PRICE_PAGE_SIZE = 18;
+    private static final int SLOT_PRICE_PREVIOUS = 27;
+    private static final int SLOT_PRICE_LEGEND = 30;
+    private static final int SLOT_PRICE_BACK = 31;
+    private static final int SLOT_PRICE_NEXT = 35;
 
     private final CdrMoonFishing plugin;
     private final FishRegistry registry;
@@ -56,43 +64,95 @@ public final class FishMarketManager {
         Inventory inventory = Bukkit.createInventory(new FishMarketHolder(), 27,
                 Component.text("Pasar Ikan Bulan", NamedTextColor.DARK_AQUA));
 
-        List<FishDefinition> fish = new ArrayList<>(registry.definitions().values());
-        fish.sort(Comparator.comparingInt((FishDefinition value) -> value.rarity().ordinal())
-                .thenComparing(FishDefinition::displayName, String.CASE_INSENSITIVE_ORDER));
-        for (int slot = 0; slot < Math.min(9, fish.size()); slot++) inventory.setItem(slot, speciesCard(fish.get(slot)));
-
+        inventory.setItem(SLOT_PRICE_LIST, button(Material.WRITABLE_BOOK, "Daftar Harga Semua Ikan", NamedTextColor.AQUA,
+                List.of(
+                        Component.text(registry.definitions().size() + " spesies terdaftar", NamedTextColor.GRAY),
+                        Component.text("Klik untuk membuka daftar harga per halaman.", NamedTextColor.GREEN),
+                        Component.text("🔥 menandakan ikan dapat dimasak.", NamedTextColor.GOLD)
+                )));
         inventory.setItem(SLOT_FEATURED, featuredCard());
         inventory.setItem(SLOT_HELD, heldCard(player));
         inventory.setItem(SLOT_SELL_HELD, button(Material.EMERALD, "Jual Ikan di Tangan", NamedTextColor.GREEN,
                 List.of(Component.text("Jual ikan custom yang sedang kamu pegang.", NamedTextColor.GRAY))));
-        inventory.setItem(SLOT_SELL_ALL, button(Material.CHEST, "Jual Semua Ikan", NamedTextColor.GOLD,
-                List.of(Component.text("Jual semua ikan CdrMoonFishing yang valid di inventory.", NamedTextColor.GRAY))));
+        inventory.setItem(SLOT_SELL_ALL, sellAllCard(player));
         inventory.setItem(SLOT_CLOSE, button(Material.BARRIER, "Tutup", NamedTextColor.RED, List.of()));
-        inventory.setItem(25, button(Material.SHIELD, "Keamanan Pasar", NamedTextColor.AQUA,
+        inventory.setItem(SLOT_SECURITY, button(Material.SHIELD, "Keamanan Pasar", NamedTextColor.AQUA,
                 List.of(Component.text("Anti-duplikat tangkapan unik: AKTIF", NamedTextColor.GREEN),
                         Component.text("ID tangkapan terjual: " + soldLedger.size(), NamedTextColor.DARK_GRAY))));
 
         if (!plugin.getConfig().getBoolean("economy.enabled", true)) {
-            inventory.setItem(26, button(Material.REDSTONE_BLOCK, "Pasar Dinonaktifkan", NamedTextColor.RED,
+            inventory.setItem(24, button(Material.REDSTONE_BLOCK, "Pasar Dinonaktifkan", NamedTextColor.RED,
                     List.of(Component.text("economy.enabled = false di config.yml", NamedTextColor.GRAY))));
         } else if (!economy.ensureReady()) {
-            inventory.setItem(26, button(Material.REDSTONE_BLOCK, "Ekonomi Vault Offline", NamedTextColor.RED,
+            inventory.setItem(24, button(Material.REDSTONE_BLOCK, "Ekonomi Vault Offline", NamedTextColor.RED,
                     List.of(Component.text("Pasang/atur Vault + provider ekonomi.", NamedTextColor.GRAY))));
         }
 
         player.openInventory(inventory);
     }
 
+    public void openPriceList(Player player, int requestedPage) {
+        List<FishDefinition> fish = sortedFish();
+        int pageCount = Math.max(1, (int) Math.ceil(fish.size() / (double) PRICE_PAGE_SIZE));
+        int page = Math.max(0, Math.min(requestedPage, pageCount - 1));
+
+        Inventory inventory = Bukkit.createInventory(new FishPriceListHolder(page), 36,
+                Component.text("Daftar Harga Ikan • " + (page + 1) + "/" + pageCount, NamedTextColor.DARK_AQUA));
+
+        int from = page * PRICE_PAGE_SIZE;
+        int to = Math.min(fish.size(), from + PRICE_PAGE_SIZE);
+        for (int index = from; index < to; index++) {
+            inventory.setItem(index - from, speciesCard(fish.get(index)));
+        }
+
+        if (page > 0) {
+            inventory.setItem(SLOT_PRICE_PREVIOUS, button(Material.ARROW, "Halaman Sebelumnya", NamedTextColor.YELLOW,
+                    List.of(Component.text("Halaman " + page, NamedTextColor.GRAY))));
+        }
+        inventory.setItem(SLOT_PRICE_LEGEND, button(Material.CAMPFIRE, "Keterangan Memasak", NamedTextColor.GOLD,
+                List.of(
+                        Component.text("🔥 Bisa dimasak di Furnace/Smoker/Campfire", NamedTextColor.GREEN),
+                        Component.text("✖ Tidak dapat dimasak", NamedTextColor.DARK_GRAY)
+                )));
+        inventory.setItem(SLOT_PRICE_BACK, button(Material.OAK_DOOR, "Kembali ke Pasar", NamedTextColor.AQUA, List.of()));
+        if (page + 1 < pageCount) {
+            inventory.setItem(SLOT_PRICE_NEXT, button(Material.ARROW, "Halaman Berikutnya", NamedTextColor.YELLOW,
+                    List.of(Component.text("Halaman " + (page + 2), NamedTextColor.GRAY))));
+        }
+
+        player.openInventory(inventory);
+    }
+
     public boolean isMarket(Inventory inventory) {
-        return inventory != null && inventory.getHolder() instanceof FishMarketHolder;
+        if (inventory == null) return false;
+        return inventory.getHolder() instanceof FishMarketHolder
+                || inventory.getHolder() instanceof FishPriceListHolder;
     }
 
     public void handleClick(Player player, int rawSlot) {
+        Inventory top = player.getOpenInventory().getTopInventory();
+        if (top.getHolder() instanceof FishPriceListHolder holder) {
+            handlePriceListClick(player, holder.page(), rawSlot);
+            return;
+        }
+
         switch (rawSlot) {
+            case SLOT_PRICE_LIST -> openPriceList(player, 0);
             case SLOT_SELL_HELD -> { sellHeld(player); refreshNextTick(player); }
             case SLOT_SELL_ALL -> { sellAll(player); refreshNextTick(player); }
             case SLOT_CLOSE -> player.closeInventory();
             default -> { }
+        }
+    }
+
+    private void handlePriceListClick(Player player, int page, int rawSlot) {
+        int pageCount = Math.max(1, (int) Math.ceil(registry.definitions().size() / (double) PRICE_PAGE_SIZE));
+        if (rawSlot == SLOT_PRICE_PREVIOUS && page > 0) {
+            openPriceList(player, page - 1);
+        } else if (rawSlot == SLOT_PRICE_NEXT && page + 1 < pageCount) {
+            openPriceList(player, page + 1);
+        } else if (rawSlot == SLOT_PRICE_BACK) {
+            open(player);
         }
     }
 
@@ -321,13 +381,26 @@ public final class FishMarketManager {
         return true;
     }
 
+    private List<FishDefinition> sortedFish() {
+        List<FishDefinition> fish = new ArrayList<>(registry.definitions().values());
+        fish.sort(Comparator.comparingInt((FishDefinition value) -> value.rarity().ordinal())
+                .thenComparing(FishDefinition::displayName, String.CASE_INSENSITIVE_ORDER));
+        return fish;
+    }
+
     private ItemStack speciesCard(FishDefinition fish) {
         boolean featured = isFeatured(fish);
         double oneKg = price(fish, 1.0, 1, featured);
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.text("Dasar: " + economy.format(fish.basePricePerKg()) + " / kg", NamedTextColor.GRAY));
-        lore.add(Component.text("Nilai 1 kg saat ini: " + economy.format(oneKg), NamedTextColor.GREEN));
+        lore.add(Component.text("Harga dasar: " + economy.format(fish.basePricePerKg()) + " / kg", NamedTextColor.GRAY));
+        lore.add(Component.text("Harga 1 kg saat ini: " + economy.format(oneKg), NamedTextColor.GREEN));
+        lore.add(Component.text(String.format(Locale.US, "Berat: %.2f–%.2f kg", fish.minWeight(), fish.maxWeight()), NamedTextColor.GRAY));
         lore.add(Component.text("Kelangkaan: " + fish.rarity().displayName(), NamedTextColor.DARK_GRAY));
+        if (fish.cookable()) {
+            lore.add(Component.text("🔥 Bisa dimasak", NamedTextColor.GOLD));
+        } else {
+            lore.add(Component.text("✖ Tidak dapat dimasak", NamedTextColor.DARK_GRAY));
+        }
         if (featured) lore.add(Component.text("★ TANGKAPAN UNGGULAN HARI INI", NamedTextColor.GOLD));
         return button(fish.material(), fish.displayName(), featured ? NamedTextColor.GOLD : NamedTextColor.AQUA, lore);
     }
@@ -353,6 +426,8 @@ public final class FishMarketManager {
         List<Component> lore = new ArrayList<>();
         lore.add(Component.text(String.format(Locale.US, "Berat: %.2f kg", quote.weight()), NamedTextColor.GRAY));
         lore.add(Component.text("Nilai: " + economy.format(quote.totalValue()), NamedTextColor.GREEN));
+        lore.add(Component.text(quote.fish().cookable() ? "🔥 Bisa dimasak" : "✖ Tidak dapat dimasak",
+                quote.fish().cookable() ? NamedTextColor.GOLD : NamedTextColor.DARK_GRAY));
         if (quote.featured()) lore.add(Component.text("★ Bonus Tangkapan Unggulan diterapkan", NamedTextColor.GOLD));
         if (quote.catchUid() != null) {
             lore.add(Component.text(soldLedger.isSold(quote.catchUid()) ? "Identitas: SUDAH DIJUAL" : "Identitas: VALID",
@@ -361,11 +436,42 @@ public final class FishMarketManager {
         return button(quote.fish().material(), quote.fish().displayName(), NamedTextColor.AQUA, lore);
     }
 
+    private ItemStack sellAllCard(Player player) {
+        InventorySalePreview preview = previewAll(player);
+        List<Component> lore = new ArrayList<>();
+        if (preview.count() <= 0) {
+            lore.add(Component.text("Tidak ada ikan valid untuk dijual.", NamedTextColor.GRAY));
+        } else {
+            lore.add(Component.text("Ikan valid: " + preview.count(), NamedTextColor.YELLOW));
+            lore.add(Component.text("Perkiraan hasil: " + economy.format(preview.total()), NamedTextColor.GREEN));
+            lore.add(Component.empty());
+            lore.add(Component.text("Klik untuk menjual SEMUA ikan CdrMoonFishing", NamedTextColor.GOLD));
+            lore.add(Component.text("yang valid di inventory sekaligus.", NamedTextColor.GRAY));
+        }
+        return button(Material.CHEST_MINECART, "JUAL SEMUA IKAN", NamedTextColor.GOLD, lore);
+    }
+
+    private InventorySalePreview previewAll(Player player) {
+        Set<String> seen = new HashSet<>();
+        int count = 0;
+        double total = 0.0;
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            FishQuote quote = quote(item);
+            if (quote == null || !isSellableIdentity(quote)) continue;
+            if (quote.catchUid() != null && !seen.add(quote.catchUid())) continue;
+            count += quote.amount();
+            total += quote.totalValue();
+        }
+        return new InventorySalePreview(count, roundMoney(total));
+    }
+
     private ItemStack button(Material material, String name, NamedTextColor color, List<Component> lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text(name, color).decoration(TextDecoration.ITALIC, false));
-        if (!lore.isEmpty()) meta.lore(lore);
+        if (!lore.isEmpty()) meta.lore(lore.stream()
+                .map(line -> line.decoration(TextDecoration.ITALIC, false))
+                .toList());
         item.setItemMeta(meta);
         return item;
     }
@@ -392,4 +498,5 @@ public final class FishMarketManager {
     public record FishQuote(FishDefinition fish, double weight, int amount, double totalValue,
                             boolean featured, String catchUid) {}
     public record SaleResult(boolean success, int amount, double total) {}
+    private record InventorySalePreview(int count, double total) {}
 }
