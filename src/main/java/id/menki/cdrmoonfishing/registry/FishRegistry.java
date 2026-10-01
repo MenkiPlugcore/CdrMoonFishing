@@ -64,6 +64,13 @@ public final class FishRegistry {
             FishItemDefinition itemDefinition = parseItemDefinition(section, id);
             List<EncounterPhase> phases = parsePhases(section, behavior, id);
 
+            boolean requestedCookable = section.getBoolean("cookable", defaultCookable(material));
+            boolean cookable = requestedCookable && supportsCooking(material);
+            if (requestedCookable && !cookable) {
+                plugin.getLogger().warning("Fish '" + id + "' requested cookable=true but material " + material
+                        + " is not supported by native cooking; cooking disabled for this fish.");
+            }
+
             FishDefinition definition = new FishDefinition(
                     id,
                     section.getString("display-name", id),
@@ -79,6 +86,7 @@ public final class FishRegistry {
                     Math.max(0.0, section.getDouble("pull-min", 0.5)),
                     Math.max(0.0, section.getDouble("pull-max", 1.5)),
                     Math.max(0.0, section.getDouble("base-price-per-kg", defaultBasePrice(rarity))),
+                    cookable,
                     normalize(section.getStringList("biomes"), false),
                     normalize(section.getStringList("weather"), true),
                     normalize(section.getStringList("time"), true),
@@ -94,8 +102,9 @@ public final class FishRegistry {
                 .filter(definition -> definition.itemDefinition() != null
                         && definition.itemDefinition().provider() != FishItemProvider.VANILLA)
                 .count();
+        long cookable = definitions.values().stream().filter(FishDefinition::cookable).count();
         plugin.getLogger().info("Loaded " + definitions.size() + " fish definitions (" + phased
-                + " multi-phase, " + customItems + " custom-item configured).");
+                + " multi-phase, " + customItems + " custom-item configured, " + cookable + " cookable).");
     }
 
     private FishItemDefinition parseItemDefinition(ConfigurationSection fishSection, String fishId) {
@@ -176,8 +185,8 @@ public final class FishRegistry {
         return new FishDefinition(
                 definition.id(), definition.displayName(), definition.material(), definition.itemDefinition(),
                 definition.rarity(), definition.behavior(), definition.chance(), minWeight, maxWeight,
-                minDepth, maxDepth, pullMin, pullMax, definition.basePricePerKg(), definition.biomes(),
-                definition.weather(), definition.time(), definition.requiredBaits(), definition.phases()
+                minDepth, maxDepth, pullMin, pullMax, definition.basePricePerKg(), definition.cookable(),
+                definition.biomes(), definition.weather(), definition.time(), definition.requiredBaits(), definition.phases()
         );
     }
 
@@ -244,6 +253,14 @@ public final class FishRegistry {
     private String blankToNull(String value) {
         if (value == null || value.isBlank()) return null;
         return value.trim();
+    }
+
+    private boolean defaultCookable(Material material) {
+        return supportsCooking(material);
+    }
+
+    private boolean supportsCooking(Material material) {
+        return material == Material.COD || material == Material.SALMON;
     }
 
     private double defaultBasePrice(FishRarity rarity) {
