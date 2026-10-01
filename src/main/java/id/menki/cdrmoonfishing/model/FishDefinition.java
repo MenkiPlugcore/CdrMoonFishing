@@ -20,6 +20,7 @@ public record FishDefinition(
         double pullMin,
         double pullMax,
         double basePricePerKg,
+        boolean cookable,
         List<String> biomes,
         List<String> weather,
         List<String> time,
