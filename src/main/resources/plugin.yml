@@ -32,6 +32,10 @@ commands:
     description: Open or manage fishing tournaments
     usage: /fishtournament [status|top|start|stop|cancel]
     aliases: [ftourney, ftournament]
+  fishevent:
+    description: View or manage timed Fishing Fever buffs
+    usage: /fishevent [status|start|stop]
+    aliases: [fishbuff, fevent, fishingevent]
   fishleaderboard:
     description: Open lifetime fishing leaderboards
     usage: /fishleaderboard [catches|weight|biggest|legendary] [page]
