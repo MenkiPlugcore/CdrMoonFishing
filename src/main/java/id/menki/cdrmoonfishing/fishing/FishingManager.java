@@ -2,7 +2,9 @@ package id.menki.cdrmoonfishing.fishing;
 
 import id.menki.cdrmoonfishing.CdrMoonFishing;
 import id.menki.cdrmoonfishing.bait.BaitManager;
+import id.menki.cdrmoonfishing.command.FishEventCommand;
 import id.menki.cdrmoonfishing.contracts.ContractManager;
+import id.menki.cdrmoonfishing.event.FishingBuffEventManager;
 import id.menki.cdrmoonfishing.model.BaitDefinition;
 import id.menki.cdrmoonfishing.model.EncounterPhase;
 import id.menki.cdrmoonfishing.model.FishBehavior;
@@ -20,6 +22,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -44,6 +47,7 @@ public final class FishingManager {
     private final PlayerStatsManager statsManager;
     private final RodManager rodManager;
     private final ContractManager contractManager;
+    private final FishingBuffEventManager eventManager;
     private final Map<UUID, PreparedEncounter> prepared = new ConcurrentHashMap<>();
     private final Map<UUID, FishingSession> sessions = new ConcurrentHashMap<>();
 
@@ -66,6 +70,7 @@ public final class FishingManager {
         this.statsManager = statsManager;
         this.rodManager = rodManager;
         this.contractManager = contractManager;
+        this.eventManager = new FishingBuffEventManager(plugin);
         this.fishIdKey = new NamespacedKey(plugin, "fish_id");
         this.rarityKey = new NamespacedKey(plugin, "rarity");
         this.weightKey = new NamespacedKey(plugin, "weight_kg");
@@ -74,6 +79,16 @@ public final class FishingManager {
         this.caughtAtKey = new NamespacedKey(plugin, "caught_at");
         this.behaviorKey = new NamespacedKey(plugin, "behavior");
         this.baitKey = new NamespacedKey(plugin, "bait_used");
+
+        PluginCommand fishEvent = plugin.getCommand("fishevent");
+        if (fishEvent != null) {
+            FishEventCommand command = new FishEventCommand(eventManager);
+            fishEvent.setExecutor(command);
+            fishEvent.setTabCompleter(command);
+        } else {
+            plugin.getLogger().severe("Command 'fishevent' is missing from plugin.yml.");
+        }
+
         startTicker();
     }
 
@@ -92,7 +107,7 @@ public final class FishingManager {
         BaitDefinition bait = baitManager.resolveSelected(player);
 
         FishDefinition fish = registry.select(region, depth, weather, time, bait,
-                definition -> rodManager.rarityMultiplier(player, definition));
+                definition -> rodManager.rarityMultiplier(player, definition) * eventManager.rarityMultiplier(definition));
         if (fish == null) {
             prepared.remove(player.getUniqueId());
             player.sendActionBar(Component.text("Sepertinya tidak ada ikan yang tertarik di sini.", NamedTextColor.GRAY));
@@ -104,7 +119,7 @@ public final class FishingManager {
             if (!baitManager.consume(player, bait)) {
                 bait = null;
                 fish = registry.select(region, depth, weather, time, null,
-                        definition -> rodManager.rarityMultiplier(player, definition));
+                        definition -> rodManager.rarityMultiplier(player, definition) * eventManager.rarityMultiplier(definition));
                 if (fish == null) {
                     prepared.remove(player.getUniqueId());
                     return false;
@@ -117,6 +132,7 @@ public final class FishingManager {
         prepared.put(player.getUniqueId(), new PreparedEncounter(fish, region, depth, weather, time, baitId));
         Component hint = Component.text(biteHint(fish.rarity()), rarityColor(fish.rarity()));
         if (bait != null) hint = hint.append(Component.text("  • " + bait.displayName(), NamedTextColor.GOLD));
+        if (eventManager.isActive()) hint = hint.append(Component.text("  • FEVER x" + eventManager.multiplier(), NamedTextColor.GOLD));
         if (!fish.phases().isEmpty()) hint = hint.append(Component.text("  • Multi-Fase", NamedTextColor.LIGHT_PURPLE));
         player.sendActionBar(hint);
         player.playSound(player.getLocation(), Sound.ENTITY_FISHING_BOBBER_SPLASH, 0.8f, 1.15f);
@@ -213,7 +229,7 @@ public final class FishingManager {
             // fish/autonomous physics can ONLY reduce tension (move marker left).
             // Java use/attack and Bedrock input both remain the same reel pulse that moves right.
             double leftPull = slack + (pull * fishPullScale) + behaviorPull + jitter;
-            leftPull = Math.max(0.05, leftPull); // jitter may soften a pull, never reverse its direction.
+            leftPull = Math.max(0.05, leftPull);
             session.tension(clamp(session.tension() - leftPull, 0.0, 100.0));
 
             boolean safe = session.tension() >= safeMin && session.tension() <= safeMax;
@@ -283,7 +299,6 @@ public final class FishingManager {
             case ERRATIC -> {
                 double chance = clamp(plugin.getConfig().getDouble("behavior.erratic-surge-chance", 0.18), 0.0, 1.0);
                 if (random.nextDouble() < chance) {
-                    // Erratic changes pull strength unpredictably, but never pushes the marker right.
                     pull = randomBetween(
                             plugin.getConfig().getDouble("behavior.erratic-surge-min", 2.5),
                             plugin.getConfig().getDouble("behavior.erratic-surge-max", 5.5));
@@ -317,7 +332,7 @@ public final class FishingManager {
     private void completeCatch(Player player, FishingSession session) {
         sessions.remove(player.getUniqueId());
 
-        double weight = randomBetween(session.fish().minWeight(), session.fish().maxWeight());
+        double weight = eventManager.rollWeight(session.fish().minWeight(), session.fish().maxWeight());
         weight = Math.round(weight * 100.0) / 100.0;
         ItemStack reward = createFishItem(player, session, weight);
 
@@ -331,6 +346,9 @@ public final class FishingManager {
         player.sendMessage(Component.text("Berhasil menangkap ", NamedTextColor.GRAY)
                 .append(Component.text(session.fish().displayName(), rarityColor(session.fish().rarity())))
                 .append(Component.text(" • " + String.format(Locale.US, "%.2f kg", weight) + " • kedalaman " + session.depth(), NamedTextColor.GRAY)));
+        if (eventManager.isActive()) {
+            player.sendMessage(Component.text("🔥 Fishing Fever x" + eventManager.multiplier() + " aktif pada tangkapan ini.", NamedTextColor.GOLD));
+        }
 
         if (record.newDiscovery()) {
             player.sendMessage(Component.text("✦ PENEMUAN FISHDEX! ", NamedTextColor.AQUA)
@@ -395,9 +413,11 @@ public final class FishingManager {
     public FishingSession session(Player player) { return sessions.get(player.getUniqueId()); }
     public int activeCount() { return sessions.size(); }
     public int preparedCount() { return prepared.size(); }
+    public FishingBuffEventManager eventManager() { return eventManager; }
 
     public void shutdown() {
         if (ticker != null) ticker.cancel();
+        if (eventManager != null) eventManager.shutdown();
         prepared.clear();
         sessions.clear();
     }
