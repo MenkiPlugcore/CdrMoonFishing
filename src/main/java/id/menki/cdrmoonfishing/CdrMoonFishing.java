@@ -11,6 +11,7 @@ import id.menki.cdrmoonfishing.command.FishRodCommand;
 import id.menki.cdrmoonfishing.command.FishTournamentCommand;
 import id.menki.cdrmoonfishing.command.FishingCommand;
 import id.menki.cdrmoonfishing.command.FishingHubCommand;
+import id.menki.cdrmoonfishing.config.BundledYamlSynchronizer;
 import id.menki.cdrmoonfishing.config.FishContentMigration;
 import id.menki.cdrmoonfishing.config.IndonesianLocalizationMigration;
 import id.menki.cdrmoonfishing.contracts.ContractManager;
@@ -80,6 +81,13 @@ public final class CdrMoonFishing extends JavaPlugin {
         saveResource("contracts.yml", false);
         saveResource("milestones.yml", false);
         saveResource("supply.yml", false);
+
+        // Keep installed YAML files synchronized with the defaults bundled in
+        // the new JAR. Missing keys are added, existing admin values are kept.
+        BundledYamlSynchronizer.syncAll(this);
+        reloadConfig();
+        getConfig().options().copyDefaults(true);
+
         FishContentMigration.apply(this);
         IndonesianLocalizationMigration.apply(this);
 
@@ -216,9 +224,11 @@ public final class CdrMoonFishing extends JavaPlugin {
     }
 
     public void reloadPlugin() {
+        // Synchronize files before reloading managers so newly introduced keys
+        // are immediately visible without deleting any existing YAML file.
+        BundledYamlSynchronizer.syncAll(this);
         reloadConfig();
         getConfig().options().copyDefaults(true);
-        saveConfig();
         FishContentMigration.apply(this);
         IndonesianLocalizationMigration.apply(this);
         fishRegistry.reload();
@@ -232,7 +242,7 @@ public final class CdrMoonFishing extends JavaPlugin {
         if (supplyShopManager != null) supplyShopManager.reload();
         if (supplyAccessManager != null) supplyAccessManager.reload();
         if (fishItemProviderManager != null) fishItemProviderManager.clearWarnings();
-        getLogger().info("Configuration, localization, registries, Fish Market and Fishing Supply reloaded.");
+        getLogger().info("Configuration auto-sync, localization, registries, Fish Market and Fishing Supply reloaded.");
     }
 
     public FishingManager getFishingManager() { return fishingManager; }
