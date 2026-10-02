@@ -75,7 +75,7 @@ public final class SupplyShopManager {
             return;
         }
         if (rawSlot == UPGRADE_SLOT) {
-            upgradeHeldRod(player);
+            upgradeInventoryRod(player);
             reopen(player);
             return;
         }
@@ -103,20 +103,26 @@ public final class SupplyShopManager {
         player.sendMessage(Component.text("Kamu menerima " + starter.displayName() + " gratis.", NamedTextColor.AQUA));
     }
 
-    private void upgradeHeldRod(Player player) {
-        ItemStack held = player.getInventory().getItemInMainHand();
-        if (!rodManager.isProgressionRod(held)) {
-            player.sendMessage(Component.text("Pegang joran CdrMoonFishing yang ingin di-upgrade di tangan utama.", NamedTextColor.RED));
+    /**
+     * v1.3.1: Bedrock-safe upgrade flow.
+     * The player no longer needs to hold/right-click with a fishing rod.
+     * We rescan the storage inventory when the GUI button is clicked and upgrade
+     * the highest progression tier that still has a next tier.
+     */
+    private void upgradeInventoryRod(Player player) {
+        RodCandidate candidate = findUpgradeCandidate(player);
+        if (candidate == null) {
+            RodCandidate anyRod = findAnyRod(player);
+            if (anyRod != null) {
+                player.sendMessage(Component.text("Joran CdrMoonFishing di inventory sudah berada di tier maksimum.", NamedTextColor.GOLD));
+            } else {
+                player.sendMessage(Component.text("Tidak ada joran CdrMoonFishing di inventory yang bisa di-upgrade.", NamedTextColor.RED));
+            }
             return;
         }
 
-        RodTierDefinition current = rodManager.tier(held);
-        RodTierDefinition next = rodManager.registry().nextTier(current);
-        if (current == null || next == null) {
-            player.sendMessage(Component.text("Joran ini sudah berada di tier maksimum.", NamedTextColor.GOLD));
-            return;
-        }
-
+        RodTierDefinition current = candidate.current();
+        RodTierDefinition next = candidate.next();
         double price = upgradePrice(next.id());
         if (price < 0.0) {
             player.sendMessage(Component.text("Harga upgrade ke " + next.displayName() + " belum dikonfigurasi.", NamedTextColor.RED));
@@ -131,19 +137,28 @@ public final class SupplyShopManager {
             return;
         }
 
+        RodCandidate verified = findUpgradeCandidate(player);
+        if (verified == null || verified.slot() != candidate.slot()
+                || !verified.current().id().equals(current.id())
+                || !verified.next().id().equals(next.id())) {
+            player.sendMessage(Component.text("Inventory berubah. Klik upgrade lagi agar joran dideteksi ulang.", NamedTextColor.YELLOW));
+            return;
+        }
+
         VaultEconomyHook.WithdrawResult transaction = economy.withdraw(player, price);
         if (!transaction.success()) {
             player.sendMessage(Component.text("Upgrade gagal: " + transaction.error(), NamedTextColor.RED));
             return;
         }
 
-        if (!rodManager.setTier(held, next.id())) {
+        ItemStack rod = player.getInventory().getItem(candidate.slot());
+        if (!rodManager.isProgressionRod(rod) || !rodManager.setTier(rod, next.id())) {
             economy.deposit(player, price);
             player.sendMessage(Component.text("Upgrade gagal dan uangmu sudah dikembalikan.", NamedTextColor.RED));
             return;
         }
 
-        player.getInventory().setItemInMainHand(held);
+        player.getInventory().setItem(candidate.slot(), rod);
         player.sendMessage(Component.text("Upgrade berhasil: " + current.displayName() + " → " + next.displayName(), NamedTextColor.GREEN));
         player.sendMessage(Component.text("Biaya: " + economy.format(price), NamedTextColor.GRAY));
     }
@@ -196,25 +211,27 @@ public final class SupplyShopManager {
     }
 
     private ItemStack upgradeButton(Player player) {
-        ItemStack held = player.getInventory().getItemInMainHand();
-        RodTierDefinition current = rodManager.tier(held);
-        RodTierDefinition next = rodManager.registry().nextTier(current);
+        RodCandidate candidate = findUpgradeCandidate(player);
+        RodCandidate anyRod = candidate == null ? findAnyRod(player) : candidate;
         ItemStack item = new ItemStack(Material.ANVIL);
         ItemMeta meta = item.getItemMeta();
         meta.displayName(Component.text("Upgrade Joran", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         List<Component> lore = new ArrayList<>();
 
-        if (current == null) {
-            lore.add(Component.text("Pegang joran CdrMoonFishing di tangan utama.", NamedTextColor.RED));
-        } else if (next == null) {
-            lore.add(Component.text(current.displayName(), NamedTextColor.AQUA));
+        if (anyRod == null) {
+            lore.add(Component.text("Tidak ada joran CdrMoonFishing di inventory.", NamedTextColor.RED));
+            lore.add(Component.text("Tidak perlu memegang joran saat membuka shop.", NamedTextColor.DARK_GRAY));
+        } else if (candidate == null) {
+            lore.add(Component.text(anyRod.current().displayName(), NamedTextColor.AQUA));
             lore.add(Component.text("Tier maksimum tercapai.", NamedTextColor.GOLD));
         } else {
-            double price = upgradePrice(next.id());
-            lore.add(Component.text(current.displayName() + " → " + next.displayName(), NamedTextColor.AQUA));
+            double price = upgradePrice(candidate.next().id());
+            lore.add(Component.text("Terdeteksi: " + candidate.current().displayName(), NamedTextColor.AQUA));
+            lore.add(Component.text(candidate.current().displayName() + " → " + candidate.next().displayName(), NamedTextColor.AQUA));
             lore.add(Component.text("Harga: " + (price < 0 ? "belum diatur" : economy.format(price)), NamedTextColor.YELLOW));
             lore.add(Component.empty());
-            lore.add(Component.text("Upgrade wajib berurutan. Joran lama ditukar langsung.", NamedTextColor.GRAY));
+            lore.add(Component.text("Joran otomatis dicari dari inventory.", NamedTextColor.GRAY));
+            lore.add(Component.text("Tidak perlu dipegang • aman untuk Bedrock.", NamedTextColor.GREEN));
             lore.add(Component.text("Klik untuk upgrade.", NamedTextColor.GREEN));
         }
         meta.lore(clean(lore));
@@ -277,6 +294,55 @@ public final class SupplyShopManager {
         return config.contains(path) ? Math.max(0.0, config.getDouble(path)) : -1.0;
     }
 
+    private RodCandidate findUpgradeCandidate(Player player) {
+        RodCandidate best = null;
+        ItemStack[] storage = player.getInventory().getStorageContents();
+        List<RodTierDefinition> tiers = rodManager.registry().tiers();
+
+        for (int slot = 0; slot < storage.length; slot++) {
+            ItemStack item = storage[slot];
+            if (!rodManager.isProgressionRod(item)) continue;
+
+            RodTierDefinition current = rodManager.tier(item);
+            RodTierDefinition next = rodManager.registry().nextTier(current);
+            if (current == null || next == null) continue;
+
+            RodCandidate candidate = new RodCandidate(slot, current, next);
+            if (best == null || tierIndex(tiers, current) > tierIndex(tiers, best.current())) {
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    private RodCandidate findAnyRod(Player player) {
+        ItemStack[] storage = player.getInventory().getStorageContents();
+        List<RodTierDefinition> tiers = rodManager.registry().tiers();
+        RodCandidate best = null;
+
+        for (int slot = 0; slot < storage.length; slot++) {
+            ItemStack item = storage[slot];
+            if (!rodManager.isProgressionRod(item)) continue;
+
+            RodTierDefinition current = rodManager.tier(item);
+            if (current == null) continue;
+            RodTierDefinition next = rodManager.registry().nextTier(current);
+            RodCandidate candidate = new RodCandidate(slot, current, next);
+            if (best == null || tierIndex(tiers, current) > tierIndex(tiers, best.current())) {
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    private int tierIndex(List<RodTierDefinition> tiers, RodTierDefinition tier) {
+        if (tier == null) return -1;
+        for (int i = 0; i < tiers.size(); i++) {
+            if (tiers.get(i).id().equalsIgnoreCase(tier.id())) return i;
+        }
+        return -1;
+    }
+
     private boolean hasAnyProgressionRod(Player player) {
         for (ItemStack item : player.getInventory().getContents()) {
             if (rodManager.isProgressionRod(item)) return true;
@@ -298,6 +364,8 @@ public final class SupplyShopManager {
             if (player.isOnline()) open(player);
         });
     }
+
+    private record RodCandidate(int slot, RodTierDefinition current, RodTierDefinition next) {}
 
     public static final class SupplyHolder implements InventoryHolder {
         @Override
